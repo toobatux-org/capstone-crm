@@ -1,9 +1,11 @@
 apiVersion: v1
 kind: Deployment
 metadata:
-  name: crm-deployment
+  name: crm-app-deployment
+  labels:
+    app: crm-app
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: crm-app
@@ -13,7 +15,28 @@ spec:
         app: crm-app
     spec:
       containers:
-      - name: crm-app
-        image: crm-app:latest
-        ports:
-        - containerPort: 8080
+        - name: crm-app
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          # Health Probes
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
