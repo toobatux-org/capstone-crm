@@ -2,11 +2,16 @@ package com.northstar.crm.service;
 
 import com.northstar.crm.api.dto.CreateInteractionRequest;
 import com.northstar.crm.api.dto.InteractionResponse;
+import com.northstar.crm.domain.Interaction;
+import com.northstar.crm.domain.InteractionEntity;
+import com.northstar.crm.messaging.InteractionEventPublisher;
 import com.northstar.crm.repo.CustomerRepository;
 import com.northstar.crm.repo.InteractionRepository;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class InteractionService {
@@ -15,11 +20,16 @@ public class InteractionService {
 
   private final CustomerRepository customerRepository;
   private final InteractionRepository interactionRepository;
+  private final InteractionEventPublisher interactionEventPublisher;
 
   public InteractionService(
-      CustomerRepository customerRepository, InteractionRepository interactionRepository) {
+          CustomerRepository customerRepository,
+          InteractionRepository interactionRepository,
+          InteractionEventPublisher interactionEventPublisher) {
+
     this.customerRepository = customerRepository;
     this.interactionRepository = interactionRepository;
+    this.interactionEventPublisher = interactionEventPublisher;
   }
 
   @Transactional(readOnly = true)
@@ -30,7 +40,44 @@ public class InteractionService {
 
   @Transactional
   public InteractionResponse create(CreateInteractionRequest request, String correlationHeader) {
-    // TODO: resolve customer CUS-1001; persist; return DTO (not the entity)
-    throw new UnsupportedOperationException("TODO: implement InteractionService.create");
+
+    var customer =
+            customerRepository
+                    .findByPublicId(request.customerId())
+                    .orElseThrow(() -> new UnknownCustomerException(request.customerId()));
+
+    String correlationId =
+            correlationHeader != null && !correlationHeader.isBlank()
+                    ? correlationHeader
+                    : request.correlationId() != null && !request.correlationId().isBlank()
+                    ? request.correlationId()
+                    : DEFAULT_CORRELATION;
+
+    var interaction = new InteractionEntity();
+    interaction.setId(UUID.randomUUID());
+    interaction.setCustomer(customer);
+    interaction.setInteractionType(request.interactionType());
+    interaction.setSummary(request.summary());
+    interaction.setCorrelationId(correlationId);
+
+    var saved = interactionRepository.save(interaction);
+
+    var eventInteraction = new Interaction();
+    eventInteraction.setId(saved.getId());
+    eventInteraction.setCustomerId(saved.getCustomer().getPublicId());
+    eventInteraction.setInteractionType(saved.getInteractionType());
+    eventInteraction.setSummary(saved.getSummary());
+    eventInteraction.setCorrelationId(saved.getCorrelationId());
+    eventInteraction.setCreatedAt(saved.getCreatedAt());
+
+    interactionEventPublisher.publish(eventInteraction);
+
+    return new InteractionResponse(
+            saved.getId(),
+            saved.getCustomer().getPublicId(),
+            saved.getInteractionType(),
+            saved.getSummary(),
+            saved.getCorrelationId(),
+            saved.getCreatedAt());
   }
 }
