@@ -6,9 +6,12 @@ import { AuthSessionService } from './auth-session.service';
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = inject(AuthSessionService).accessToken();
 
+  // Early return for missing token/outside URL
   if (!token || !req.url.startsWith(environment.apiBaseUrl)) {
     return next(req);
   }
+
+  // Object clone
   return next(
     req.clone({
         setHeaders: {
