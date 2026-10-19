@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   application:
     name: crm-backend
   datasource:
@@ -13,3 +16,7 @@ spring:
       hibernate.jdbc.time_zone: UTC
   flyway:
     enabled: true
+  security:
+    jwt:
+        secret: ${SPRING_SECURITY_JWT_SECRET:change-me}
+        expiration: ${SPRING_SECURITY_JWT_EXPIRATION:3600000}
