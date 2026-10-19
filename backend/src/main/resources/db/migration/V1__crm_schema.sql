@@ -1,5 +1,3 @@
--- TODO: confirm PostgreSQL types (UUID, TIMESTAMPTZ) — not Oracle NUMBER/VARCHAR2
-
 CREATE TABLE customer (
   customer_id   BIGSERIAL PRIMARY KEY,
   public_id     VARCHAR(32) NOT NULL UNIQUE,
