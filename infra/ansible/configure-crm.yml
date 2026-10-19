@@ -1,0 +1,29 @@
+# Ensures the crm-api ConfigMap exists with the expected values.
+# Idempotent: the second run reports changed=0.
+# Run:   ansible-playbook infra/ansible/configure-crm.yml -e crm_namespace=crm-dev
+# Check: ansible-playbook infra/ansible/configure-crm.yml -e crm_namespace=crm-dev --check
+# Cluster access comes from K8S_AUTH_HOST / K8S_AUTH_API_KEY env vars (GitHub Environment secrets).
+- name: Configure Northstar CRM
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    crm_namespace: crm-dev
+    kafka_topic: crm.customer.interactions.v1
+  tasks:
+    - name: Ensure crm-api ConfigMap
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: crm-api-config
+            namespace: "{{ crm_namespace }}"
+            labels:
+              app: northstar-crm
+          data:
+            SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+            CRM_KAFKA_TOPIC: "{{ kafka_topic }}"
+            SPRING_FLYWAY_ENABLED: "true"
+            JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75"

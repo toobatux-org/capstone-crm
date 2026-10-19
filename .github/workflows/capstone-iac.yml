@@ -1,0 +1,62 @@
+# Checks Terraform and Ansible on every change to infra/.
+# No cluster credentials needed: these jobs only check the code.
+# A real `terraform plan` against OpenShift is a manual, approval-gated job.
+name: Capstone IaC
+
+on:
+  pull_request:
+    paths: ["infra/**", ".github/workflows/capstone-iac.yml"]
+  push:
+    branches: [main]
+    paths: ["infra/**", ".github/workflows/capstone-iac.yml"]
+  workflow_dispatch:
+    inputs:
+      run_plan:
+        description: "Also run terraform plan against OpenShift (needs approval + secrets)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+
+  ansible-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ansible-core kubernetes
+      - run: ansible-galaxy collection install -r infra/ansible/requirements.yml
+      - run: ansible-playbook infra/ansible/configure-crm.yml --syntax-check
+
+  terraform-plan:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_plan }}
+    needs: [terraform-check, ansible-check]
+    runs-on: ubuntu-latest
+    environment: stage
+    defaults:
+      run:
+        working-directory: infra/terraform
+    env:
+      KUBE_HOST: ${{ secrets.OPENSHIFT_SERVER }}
+      KUBE_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init -backend=false
+      - run: terraform plan -no-color -out=tfplan
+      # Apply is never automatic. A person reviews this plan first.
