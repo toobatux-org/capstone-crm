@@ -1,0 +1,28 @@
+name: Capstone images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t crm-api:ci backend
+      - name: Record API image id
+        run: docker image inspect crm-api:ci --format '{{.Id}}'
+
+  frontend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build UI image
+        run: docker build -t crm-ui:ci frontend
+      - name: Record UI image id
+        run: docker image inspect crm-ui:ci --format '{{.Id}}'
