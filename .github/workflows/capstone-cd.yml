@@ -46,12 +46,19 @@ jobs:
           oc rollout status deployment/crm-ui  --timeout=180s
 
       - name: Smoke test CUS-1001 through the Route
+        env:
+          SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: |
           set -euo pipefail
           HOST=$(oc get route crm-ui -o jsonpath='{.spec.host}')
           curl -fsS -o /dev/null -w "UI %{http_code}\n" "https://$HOST/"
+          TOKEN=$(curl -fsS -X POST "https://$HOST/api/v1/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"$SMOKE_USERNAME\",\"password\":\"$SMOKE_PASSWORD\"}" | jq -r .token)
+          echo "::add-mask::$TOKEN"
           curl -fsS -w "\nAPI %{http_code}\n" \
-            -H "Authorization: Bearer lab-demo-token" \
+            -H "Authorization: Bearer $TOKEN" \
             -H "X-Correlation-ID: lab-request-001" \
             "https://$HOST/api/v1/interactions?customerId=CUS-1001"
 
