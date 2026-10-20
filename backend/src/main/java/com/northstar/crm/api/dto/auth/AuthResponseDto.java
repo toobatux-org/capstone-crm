@@ -1,5 +1,5 @@
 package com.northstar.crm.api.dto.auth;
 
-public record AuthenticationResponse(
+public record AuthResponseDto(
     String token
 ) {}
