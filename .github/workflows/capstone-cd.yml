@@ -1,0 +1,66 @@
+# Deploys image digests produced by "Capstone Images". Never rebuilds.
+name: Capstone CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [dev, test, stage, prod]
+      api_digest:
+        description: "crm-api digest (sha256:...) from Capstone Images run summary"
+        required: true
+      ui_digest:
+        description: "crm-ui digest (sha256:...) from Capstone Images run summary"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # stage/prod wait for reviewer approval
+    env:
+      PROJECT: crm-${{ inputs.environment }}
+      REGISTRY_PATH: ghcr.io/toobatux/capstone-crm
+    steps:
+      - name: Install oc
+        uses: redhat-actions/openshift-tools-installer@v1
+        with:
+          oc: "4"
+
+      - name: Log in to OpenShift
+        run: |
+          oc login --server="${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}"
+          oc project "$PROJECT"
+
+      - name: Deploy pinned digests (no rebuild)
+        run: |
+          set -euo pipefail
+          oc set image deployment/crm-api crm-api="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
+          oc set image deployment/crm-ui  crm-ui="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
+          oc rollout status deployment/crm-api --timeout=180s
+          oc rollout status deployment/crm-ui  --timeout=180s
+
+      - name: Smoke test CUS-1001 through the Route
+        run: |
+          set -euo pipefail
+          HOST=$(oc get route crm-ui -o jsonpath='{.spec.host}')
+          curl -fsS -o /dev/null -w "UI %{http_code}\n" "https://$HOST/"
+          curl -fsS -w "\nAPI %{http_code}\n" \
+            -H "Authorization: Bearer lab-demo-token" \
+            -H "X-Correlation-ID: lab-request-001" \
+            "https://$HOST/api/v1/interactions?customerId=CUS-1001"
+
+      - name: Record what was deployed
+        if: always()
+        run: |
+          {
+            echo "### Deployed to $PROJECT"
+            echo "- crm-api: \`$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}\`"
+            echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}\`"
+            echo "- Rollback: \`oc rollout undo deployment/crm-api -n $PROJECT\`"
+          } >> "$GITHUB_STEP_SUMMARY"
