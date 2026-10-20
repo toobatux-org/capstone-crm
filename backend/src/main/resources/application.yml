@@ -19,3 +19,6 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
       properties:
         spring.json.add.type.headers: false
+    consumer:
+      group-id: crm-interaction-consumer
+      auto-offset-reset: earliest
