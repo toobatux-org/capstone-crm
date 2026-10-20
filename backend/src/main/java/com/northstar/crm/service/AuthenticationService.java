@@ -53,7 +53,7 @@ public class AuthenticationService {
         return new AuthenticationResponse(jwtToken);
     }
 
-    public  AuthenticationResponse authenticate(LoginRequest request) {
+    public AuthenticationResponse authenticate(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.username(),
