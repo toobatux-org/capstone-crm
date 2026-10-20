@@ -2,7 +2,7 @@ package com.northstar.crm.service;
 
 import com.northstar.crm.api.dto.CreateInteractionRequest;
 import com.northstar.crm.api.dto.InteractionResponse;
-import com.northstar.crm.domain.Interaction;
+//import com.northstar.crm.domain.Interaction;
 import com.northstar.crm.domain.InteractionEntity;
 import com.northstar.crm.messaging.InteractionEventPublisher;
 import com.northstar.crm.repo.CustomerRepository;
@@ -62,15 +62,7 @@ public class InteractionService {
 
     var saved = interactionRepository.save(interaction);
 
-    var eventInteraction = new Interaction();
-    eventInteraction.setId(saved.getId());
-    eventInteraction.setCustomerId(saved.getCustomer().getPublicId());
-    eventInteraction.setInteractionType(saved.getInteractionType());
-    eventInteraction.setSummary(saved.getSummary());
-    eventInteraction.setCorrelationId(saved.getCorrelationId());
-    eventInteraction.setCreatedAt(saved.getCreatedAt());
-
-    interactionEventPublisher.publish(eventInteraction);
+    interactionEventPublisher.publish(saved);                     //publish() now expects an InteractionEntity instead of an Interaction
 
     return new InteractionResponse(
             saved.getId(),
