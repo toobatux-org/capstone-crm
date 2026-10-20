@@ -21,8 +21,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Timed-path demo only. Expects {@code Authorization: Bearer lab-demo-token}.
- * Not a production IdP. OPTIONS (CORS preflight) is skipped.
+ * Reads a Bearer JWT and sets the security context.
+ * Requests without a Bearer header, including CORS preflight, pass through.
  */
 @Component
 @Slf4j
