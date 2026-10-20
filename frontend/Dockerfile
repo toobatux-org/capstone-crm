@@ -9,6 +9,9 @@ RUN npx ng build --configuration=production
 
 # Stage 2: unprivileged nginx (listens on 8080, runs as non-root — works on OpenShift)
 FROM nginxinc/nginx-unprivileged:1.27-alpine
+USER root
+RUN apk upgrade --no-cache
+USER 101
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/dist/frontend/browser /usr/share/nginx/html
 EXPOSE 8080
