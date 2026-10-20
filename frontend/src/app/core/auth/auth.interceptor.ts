@@ -7,7 +7,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = inject(AuthSessionService).accessToken();
 
   // Early return for missing token/outside URL
-  if (!token || !req.url.startsWith(environment.apiBaseUrl)) {
+  if (!token || !req.url.startsWith(environment.apiBaseUrl) || req.url.includes('/api/v1/auth/')) {
     return next(req);
   }
 
