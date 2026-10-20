@@ -17,4 +17,13 @@ export class AuthApiService {
       password,
     });
   }
+
+  register(username: string, email: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiBaseUrl}/api/v1/auth/register`, {
+      username,
+      email,
+      password,
+      role: 'AGENT',
+    });
+  }
 }
