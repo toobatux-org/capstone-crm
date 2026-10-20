@@ -59,13 +59,18 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** NEW: lets the Angular dev server (port 4200) call the API from the browser. */
+    /** Lets the Angular dev server (port 4200) call the API from the browser. */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:4200"));
         config.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Correlation-ID"));
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "X-Correlation-ID",
+                "X-Correlation-Id"
+        ));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return source;
