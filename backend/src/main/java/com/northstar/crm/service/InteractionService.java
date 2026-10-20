@@ -34,8 +34,24 @@ public class InteractionService {
 
   @Transactional(readOnly = true)
   public List<InteractionResponse> list(String customerId) {
-    // TODO: reject unknown customer; return interactions for public id newest-first
-    throw new UnsupportedOperationException("TODO: implement InteractionService.list");
+
+    customerRepository
+            .findByPublicId(customerId)
+            .orElseThrow(() -> new UnknownCustomerException(customerId));
+
+    return interactionRepository
+            .findByCustomer_PublicIdOrderByCreatedAtDesc(customerId)
+            .stream()
+            .map(
+                    interaction ->
+                            new InteractionResponse(
+                                    interaction.getId(),
+                                    interaction.getCustomer().getPublicId(),
+                                    interaction.getInteractionType(),
+                                    interaction.getSummary(),
+                                    interaction.getCorrelationId(),
+                                    interaction.getCreatedAt()))
+            .toList();
   }
 
   @Transactional
