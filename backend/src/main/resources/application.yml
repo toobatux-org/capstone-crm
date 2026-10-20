@@ -20,3 +20,9 @@ spring:
     jwt:
         secret: ${SPRING_SECURITY_JWT_SECRET:change-me}
         expiration: ${SPRING_SECURITY_JWT_EXPIRATION:3600000}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+      properties:
+        spring.json.add.type.headers: false

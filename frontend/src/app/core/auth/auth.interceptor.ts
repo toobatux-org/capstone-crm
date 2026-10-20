@@ -5,10 +5,20 @@ import { AuthSessionService } from './auth-session.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = inject(AuthSessionService).accessToken();
-  // TODO: if token is present and req.url starts with environment.apiBaseUrl,
-  // clone the request with Authorization: Bearer <token>
+
+  // Early return for missing token/outside URL
   if (!token || !req.url.startsWith(environment.apiBaseUrl)) {
     return next(req);
   }
-  return next(req);
+
+  // Object clone
+  return next(
+    req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`,
+          'X-Correlation-ID' : 'lab-request-001',
+        }
+      }
+    )
+  );
 };
