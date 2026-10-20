@@ -1,12 +1,9 @@
 package com.northstar.crm.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+
 import java.time.Instant;
+import java.util.List;
 
 @Entity
 @Table(name = "customer")
@@ -29,19 +26,12 @@ public class CustomerEntity {
   @Column(name = "created_at", nullable = false)
   private Instant createdAt = Instant.now();
 
-  public Long getId() {
-    return id;
-  }
+  public Long getId() { return id; }
+  public String getPublicId() { return publicId; }
+  public String getFullName() { return fullName; }
+  public String getStatus() { return status; }
 
-  public String getPublicId() {
-    return publicId;
-  }
-
-  public String getFullName() {
-    return fullName;
-  }
-
-  public String getStatus() {
-    return status;
-  }
+//  public void setPublicId(String publicId) { this.publicId = publicId; }
+//  public void setFullName(String fullName) { this.fullName = fullName; }
+//  public void setStatus(String status) { this.status = status; }
 }

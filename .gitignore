@@ -58,6 +58,8 @@ frontend/src/environments/environment.local.ts
 *.tfstate
 *.tfstate.*
 .terraform/
+tfplan
+*.tfplan
 
 kubeconfig
 **/*kubeconfig*
