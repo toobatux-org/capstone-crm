@@ -1,0 +1,76 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="northstar-containers" name="Containers">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="&lt;b&gt;Northstar CRM — Containers&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="500" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="browser" value="Agent's browser" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;verticalAlign=top;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="150" width="200" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ui" value="&lt;b&gt;Angular SPA&lt;/b&gt;&lt;br&gt;auth + correlation&lt;br&gt;interceptors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="195" width="160" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ocp" value="OpenShift Project" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontStyle=1;arcSize=3;" vertex="1" parent="1">
+          <mxGeometry x="290" y="60" width="890" height="430" as="geometry" />
+        </mxCell>
+        <mxCell id="route" value="&lt;b&gt;Route&lt;/b&gt;&lt;br&gt;TLS edge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="320" y="195" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="nginx" value="&lt;b&gt;crm-ui&lt;/b&gt;&lt;br&gt;nginx :8080&lt;br&gt;serves Angular,&lt;br&gt;forwards /api/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="480" y="185" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="&lt;b&gt;crm-api&lt;/b&gt;&lt;br&gt;Spring Boot REST :8080&lt;br&gt;JWT resource server&lt;br&gt;AGENT / ADMIN roles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="690" y="185" width="170" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pg" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;Flyway schema" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="960" y="80" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="topic" value="&lt;b&gt;Kafka topic&lt;/b&gt;&lt;br&gt;crm.customer.interactions.v1" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="940" y="250" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="consumer" value="&lt;b&gt;Interaction consumer&lt;/b&gt;&lt;br&gt;dedupe on eventId,&lt;br&gt;retry, DLT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="950" y="380" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="HTTPS + Bearer JWT&lt;br&gt;X-Correlation-ID: lab-request-001" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ui" target="route">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="-25" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="route" target="nginx">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="/api/*" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="nginx" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="1. save interaction&lt;br&gt;(transaction)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="api" target="pg">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="775" y="125" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" value="2. publish after commit&lt;br&gt;CustomerInteractionRecordedV1&lt;br&gt;key = customerId" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="api" target="topic">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="775" y="285" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="topic" target="consumer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="notes" value="&lt;b&gt;Fixtures (synthetic only):&lt;/b&gt; CUS-1001 Amina Khan (ACTIVE) · CUS-1002 Ravi Singh (PROSPECT) · CUS-9999 (not found)&lt;br&gt;&lt;b&gt;Security:&lt;/b&gt; no token → 401 · wrong role → 403 · the API enforces roles, not Angular&lt;br&gt;&lt;b&gt;Images:&lt;/b&gt; backend/Dockerfile → crm-api · frontend/Dockerfile → crm-ui" style="text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="510" width="1160" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

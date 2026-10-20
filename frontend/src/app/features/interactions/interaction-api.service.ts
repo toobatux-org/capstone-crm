@@ -9,16 +9,14 @@ export class InteractionApiService {
   private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiBaseUrl}/api/v1/interactions`;
 
+  // Builds query string with HttpParams
   list(customerId: string): Observable<Interaction[]> {
-    // TODO: GET this.base with query param customerId via HttpClient
-    void this.http;
-    void HttpParams;
-    void customerId;
-    return of([]);
+   const params = new HttpParams().set("customerId", customerId);
+   return this.http.get<Interaction[]>(this.base, { params });
   }
 
+  // Posts body
   create(body: CreateInteractionRequest): Observable<Interaction> {
-    // TODO: POST this.base with JSON body
-    throw new Error('TODO: implement InteractionApiService.create');
+    return this.http.post<Interaction>(this.base, body);
   }
 }
