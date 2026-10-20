@@ -1,6 +1,6 @@
 # crm-ui — Angular served by nginx
 # Stage 1: build the Angular app
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci
