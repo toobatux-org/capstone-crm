@@ -11,5 +11,5 @@ public record CreateInteractionRequest(
             regexp = "CALL|EMAIL|NOTE|MEETING",
             message = "interactionType must be CALL, EMAIL, NOTE, or MEETING")
         String interactionType,
-    @NotBlank @Size(max = 1024) String summary,
+    @NotBlank @Size(max = 1000) String summary,
     String correlationId) {}

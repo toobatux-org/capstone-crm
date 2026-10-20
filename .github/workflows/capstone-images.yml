@@ -1,28 +1,73 @@
-name: Capstone images
+# Builds the API and UI images ONCE, scans them, and records their digests.
+# capstone-cd.yml deploys these digests; nothing is rebuilt at deploy time.
+name: Capstone Images
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Switch to this once Evan's "Capstone CI" workflow exists on main:
+  # workflow_run:
+  #   workflows: ["Capstone CI"]
+  #   types: [completed]
+  #   branches: [main]
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
-  backend-image:
+  images:
+    # With workflow_run, also add: if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: crm-api
+            context: backend
+          - name: crm-ui
+            context: frontend
     steps:
       - uses: actions/checkout@v4
-      - name: Build API image
-        run: docker build -t crm-api:ci backend
-      - name: Record API image id
-        run: docker image inspect crm-api:ci --format '{{.Id}}'
 
-  frontend-image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build UI image
-        run: docker build -t crm-ui:ci frontend
-      - name: Record UI image id
-        run: docker image inspect crm-ui:ci --format '{{.Id}}'
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.name }}" >> "$GITHUB_ENV"
+
+      - name: Build and push (tagged with commit SHA)
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Scan image (fail on CRITICAL)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+          format: table
+          output: trivy-${{ matrix.name }}.txt
+
+      - name: Record digest
+        if: always()
+        run: |
+          echo "${{ matrix.name }} ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}" > digest-${{ matrix.name }}.txt
+          cat digest-${{ matrix.name }}.txt
+          echo "### ${{ matrix.name }}: \`${{ env.IMAGE }}@${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: image-${{ matrix.name }}
+          path: |
+            digest-${{ matrix.name }}.txt
+            trivy-${{ matrix.name }}.txt

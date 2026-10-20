@@ -25,7 +25,7 @@ Spring Boot publishes to Kafka only after that PostgreSQL save commits. Kafka do
 
 ## Delivery path
 
-GitHub → GitHub Actions (test and build) → Docker image → OpenShift.
+GitHub → GitHub Actions (security scan, test, build) → Docker image (by digest) → OpenShift.
 
 ## Non-goals
 
@@ -41,15 +41,15 @@ This project does not use Bitbucket Pipelines, Oracle, React, or SOAP.
 
 ## ADR-002 — Save, then publish
 
-**Decision:** The Kafka event is sent only after the interaction row commits in PostgreSQL. The event is `CustomerInteractionRecorded` version 1.
+**Decision:** The Kafka event is sent only after the interaction row commits in PostgreSQL. The event is `CustomerInteractionRecordedV1` on topic `crm.customer.interactions.v1`, keyed by customer ID, and includes an `eventId` so consumers can skip duplicates.
 
-**Why:** PostgreSQL is the source of truth. A consumer must not see an event for a save that rolled back. If publishing fails after the commit, the row remains and the publish can be retried.
+**Why:** PostgreSQL is the source of truth. A consumer must not see an event for a save that rolled back. If publishing fails after the commit, the row stays saved and the failure is logged with the correlation ID; the lost event is an accepted risk in the risk register.
 
 **Rejected:** Publishing before the commit, and using Kafka as the store instead of PostgreSQL.
 
 ## ADR-003 — GitHub Actions
 
-**Decision:** GitHub Actions builds and tests the Angular app and the Spring Boot API, then produces the Docker image that OpenShift runs.
+**Decision:** GitHub Actions builds and tests the Angular app and the Spring Boot API, then builds the Docker image once; OpenShift deploys that exact image by digest.
 
 **Why:** The repository is on GitHub, and Actions is the capstone delivery path from commit to image.
 

@@ -47,3 +47,20 @@ frontend/chrome-profiler/
 
 # Frontend Local Environment Secrets
 frontend/src/environments/environment.local.ts
+
+# ==========================================
+# Secrets, Terraform state, cluster credentials
+# ==========================================
+.env
+.env.*
+!.env.example
+
+*.tfstate
+*.tfstate.*
+.terraform/
+tfplan
+*.tfplan
+
+kubeconfig
+**/*kubeconfig*
+**/.kube/
