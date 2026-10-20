@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: your-angular-frontend:latest
-          imagePullPolicy: Never
+          image: ghcr.io/toobatux/frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
 ---
