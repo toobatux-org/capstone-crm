@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login-page',
@@ -74,9 +75,23 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
             <button type="button" class="secondary" data-testid="register" (click)="showRegister()" [disabled]="submitting()">
               Register
             </button>
+            @if (testSignInEnabled) {
+              <button
+                type="button"
+                class="secondary"
+                data-testid="test-sign-in"
+                (click)="startDemo()"
+                [disabled]="submitting()"
+              >
+                Open local demo
+              </button>
+            }
           }
         </div>
       </form>
+      @if (!registering() && testSignInEnabled) {
+        <p class="probe">Uses sample data in this browser. No server connection or account is required.</p>
+      }
     </section>
   `,
   styles: `
@@ -110,6 +125,7 @@ export class LoginPageComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly registering = signal(false);
+  readonly testSignInEnabled = environment.testSignInEnabled;
 
   submitLabel(): string {
     if (this.submitting()) {
@@ -134,6 +150,14 @@ export class LoginPageComponent {
       return;
     }
     this.login();
+  }
+
+  startDemo(): void {
+    if (!this.testSignInEnabled || this.submitting() || this.registering()) {
+      return;
+    }
+    this.session.startDemoSession();
+    void this.router.navigate(['/customers']);
   }
 
   private login(): void {
@@ -185,6 +209,6 @@ export class LoginPageComponent {
   private finish(token: string): void {
     this.session.setAccessToken(token);
     this.submitting.set(false);
-    void this.router.navigate(['/interactions']);
+    void this.router.navigate(['/customers']);
   }
 }

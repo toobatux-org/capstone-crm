@@ -1,7 +1,14 @@
 <header>
   <h1>Northstar CRM</h1>
-  @if (session.accessToken()) {
-    <button type="button" (click)="logout()">Log out</button>
+  @if (session.isSignedIn()) {
+    <nav class="flex items-center gap-4">
+      @if (session.demoMode()) {
+        <span class="text-sm text-[#59645d]">Local demo</span>
+      }
+      <a routerLink="/customers">Customers</a>
+      <a routerLink="/interactions">Interactions</a>
+      <button type="button" (click)="logout()">Log out</button>
+    </nav>
   }
 </header>
 <main>

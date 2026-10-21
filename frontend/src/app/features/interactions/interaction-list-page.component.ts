@@ -113,21 +113,76 @@ import { Interaction } from './interaction.model';
           <ul class="m-0 list-none p-0">
             @for (row of rows(); track row.id) {
               <li class="grid grid-cols-[7rem_auto_1fr_auto_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
-                <strong>{{ row.interactionType }}</strong>
-                <small class="text-[#59645d]">{{ row.customerId }}</small>
-                <span>{{ row.summary }}</span>
-                <small class="text-[#59645d]">{{ row.createdAt | date: 'medium' }}</small>
-                @if (session.isAdmin()) {
-                  <button
-                    type="button"
-                    class="cursor-pointer rounded-[3px] border border-[#9d2929] bg-white px-3 py-1 font-[inherit] font-semibold text-[#9d2929] focus:outline-2 focus:outline-offset-2 focus:outline-[#9d2929] disabled:cursor-wait disabled:opacity-[0.65]"
-                    [disabled]="deletingId() !== null"
-                    [attr.aria-label]="'Delete ' + row.interactionType + ' interaction'"
-                    (click)="delete(row)"
-                    data-testid="delete-interaction"
-                  >
-                    {{ deletingId() === row.id ? 'Deleting...' : 'Delete' }}
-                  </button>
+                @if (editingId() === row.id) {
+                  <form #editForm="ngForm" (ngSubmit)="saveEdit(editForm, row)" class="grid gap-3 max-[36rem]:col-span-1 sm:col-span-5">
+                    <label class="grid gap-1 font-semibold">
+                      Interaction type
+                      <select
+                        name="editType"
+                        class="rounded-[3px] border border-[#87938b] bg-white p-2 font-[inherit]"
+                        [(ngModel)]="editType"
+                        required
+                      >
+                        @for (type of interactionTypes; track type) {
+                          <option [value]="type">{{ type }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="grid gap-1 font-semibold">
+                      Summary
+                      <textarea
+                        name="editSummary"
+                        class="rounded-[3px] border border-[#87938b] bg-white p-2 font-[inherit]"
+                        [(ngModel)]="editSummary"
+                        required
+                        maxlength="1000"
+                        rows="3"
+                      ></textarea>
+                    </label>
+                    @if (updateError()) {
+                      <p class="m-0 text-[#9d2929]" role="alert">{{ updateError() }}</p>
+                    }
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        class="cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-3 py-1 font-[inherit] font-semibold text-white disabled:cursor-wait disabled:opacity-[0.65]"
+                        [disabled]="updatingId() !== null"
+                      >{{ updatingId() === row.id ? 'Saving...' : 'Save changes' }}</button>
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-[3px] border border-[#87938b] bg-white px-3 py-1 font-[inherit] font-semibold"
+                        [disabled]="updatingId() !== null"
+                        (click)="cancelEdit()"
+                      >Cancel</button>
+                    </div>
+                  </form>
+                } @else {
+                  <strong>{{ row.interactionType }}</strong>
+                  <small class="text-[#59645d]">{{ row.customerId }}</small>
+                  <span>{{ row.summary }}</span>
+                  <small class="text-[#59645d]">{{ row.createdAt | date: 'medium' }}</small>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded-[3px] border border-[#176b54] bg-white px-3 py-1 font-[inherit] font-semibold text-[#176b54] disabled:cursor-wait disabled:opacity-[0.65]"
+                      [disabled]="updatingId() !== null || deletingId() !== null"
+                      [attr.aria-label]="'Edit ' + row.interactionType + ' interaction'"
+                      (click)="beginEdit(row)"
+                      data-testid="edit-interaction"
+                    >Edit</button>
+                    @if (session.isAdmin()) {
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-[3px] border border-[#9d2929] bg-white px-3 py-1 font-[inherit] font-semibold text-[#9d2929] focus:outline-2 focus:outline-offset-2 focus:outline-[#9d2929] disabled:cursor-wait disabled:opacity-[0.65]"
+                        [disabled]="deletingId() !== null || updatingId() !== null"
+                        [attr.aria-label]="'Delete ' + row.interactionType + ' interaction'"
+                        (click)="delete(row)"
+                        data-testid="delete-interaction"
+                      >
+                        {{ deletingId() === row.id ? 'Deleting...' : 'Delete' }}
+                      </button>
+                    }
+                  </div>
                 }
               </li>
             }
@@ -149,9 +204,14 @@ export class InteractionListPageComponent {
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly deletingId = signal<string | null>(null);
+  readonly editingId = signal<string | null>(null);
+  readonly updatingId = signal<string | null>(null);
   readonly listError = signal<string | null>(null);
   readonly createError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
+  readonly updateError = signal<string | null>(null);
+  editType = '';
+  editSummary = '';
 
   constructor() {
     this.reload();
@@ -196,6 +256,48 @@ export class InteractionListPageComponent {
       error: (err) => {
         this.loading.set(false);
         this.listError.set(this.message('load interactions', err));
+      },
+    });
+  }
+
+  beginEdit(row: Interaction): void {
+    this.editingId.set(row.id);
+    this.editType = row.interactionType;
+    this.editSummary = row.summary;
+    this.updateError.set(null);
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+    this.editType = '';
+    this.editSummary = '';
+    this.updateError.set(null);
+  }
+
+  saveEdit(form: NgForm, row: Interaction): void {
+    this.updateError.set(null);
+    const summary = this.editSummary.trim();
+    if (
+      form.invalid ||
+      !this.editType ||
+      !summary ||
+      summary.length > 1000 ||
+      this.updatingId() !== null
+    ) {
+      form.control.markAllAsTouched();
+      return;
+    }
+
+    this.updatingId.set(row.id);
+    this.api.update(row.id, { interactionType: this.editType, summary }).subscribe({
+      next: (updated) => {
+        this.rows.update((rows) => rows.map((item) => (item.id === updated.id ? updated : item)));
+        this.updatingId.set(null);
+        this.cancelEdit();
+      },
+      error: (err) => {
+        this.updatingId.set(null);
+        this.updateError.set(this.message('update interaction', err));
       },
     });
   }
