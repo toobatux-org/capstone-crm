@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InteractionRepository extends JpaRepository<InteractionEntity, UUID> {
   List<InteractionEntity> findByCustomer_PublicIdOrderByCreatedAtDesc(String publicId);
+
+  List<InteractionEntity> findAllByOrderByCreatedAtDesc();
 }

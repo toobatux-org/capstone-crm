@@ -13,3 +13,8 @@ export interface CreateInteractionRequest {
   summary: string;
   correlationId?: string;
 }
+
+export interface UpdateInteractionRequest {
+  interactionType: string;
+  summary: string;
+}

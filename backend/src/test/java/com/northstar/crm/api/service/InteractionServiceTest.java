@@ -157,4 +157,29 @@ public class InteractionServiceTest {
                 never())
                 .findByCustomer_PublicIdOrderByCreatedAtDesc("CUS-9999");
     }
+
+    @Test
+    void listAll_returnsInteractionsAcrossCustomers() {
+        Instant createdAt = Instant.now();
+        InteractionEntity interaction = new InteractionEntity();
+        interaction.setId(UUID.randomUUID());
+        interaction.setCustomer(customer);
+        interaction.setInteractionType("EMAIL");
+        interaction.setSummary("Sent a follow-up");
+        interaction.setCorrelationId("corr-all");
+        interaction.setCreatedAt(createdAt);
+
+        given(customer.getPublicId()).willReturn("CUS-1002");
+        given(interactionRepository.findAllByOrderByCreatedAtDesc())
+                .willReturn(List.of(interaction));
+
+        List<InteractionResponse> responses = interactionService.listAll();
+
+        assertThat(responses).hasSize(1);
+        assertThat(responses.get(0).customerId()).isEqualTo("CUS-1002");
+        assertThat(responses.get(0).interactionType()).isEqualTo("EMAIL");
+        assertThat(responses.get(0).summary()).isEqualTo("Sent a follow-up");
+        assertThat(responses.get(0).createdAt()).isEqualTo(createdAt);
+        verify(interactionRepository).findAllByOrderByCreatedAtDesc();
+    }
 }

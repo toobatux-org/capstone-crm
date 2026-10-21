@@ -30,6 +30,7 @@ public class CustomerEntity {
   public String getPublicId() { return publicId; }
   public String getFullName() { return fullName; }
   public String getStatus() { return status; }
+  public Instant getCreatedAt() { return createdAt; }
 
 //  public void setPublicId(String publicId) { this.publicId = publicId; }
 //  public void setFullName(String fullName) { this.fullName = fullName; }

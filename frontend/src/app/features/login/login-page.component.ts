@@ -1,8 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login-page',
@@ -22,7 +24,6 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
             id="username"
             name="username"
             [(ngModel)]="username"
-            placeholder="name@northstar.lab"
             autocomplete="username"
             required
             data-testid="username"
@@ -74,9 +75,23 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
             <button type="button" class="secondary" data-testid="register" (click)="showRegister()" [disabled]="submitting()">
               Register
             </button>
+            @if (localDemoSignInEnabled) {
+              <button
+                type="button"
+                class="secondary"
+                data-testid="test-sign-in"
+                (click)="startDemo()"
+                [disabled]="submitting()"
+              >
+                Open local demo
+              </button>
+            }
           }
         </div>
       </form>
+      @if (!registering() && localDemoSignInEnabled) {
+        <p class="probe">Uses sample data in this browser. No server connection or account is required.</p>
+      }
     </section>
   `,
   styles: `
@@ -109,6 +124,7 @@ export class LoginPageComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly registering = signal(false);
+  readonly localDemoSignInEnabled = environment.localDemoSignInEnabled;
 
   submitLabel(): string {
     if (this.submitting()) {
@@ -135,6 +151,14 @@ export class LoginPageComponent {
     this.login();
   }
 
+  startDemo(): void {
+    if (!this.localDemoSignInEnabled || this.submitting() || this.registering()) {
+      return;
+    }
+    this.session.startDemoSession();
+    void this.router.navigate(['/customers']);
+  }
+
   private login(): void {
     this.error.set('');
     this.submitting.set(true);
@@ -152,16 +176,38 @@ export class LoginPageComponent {
     this.submitting.set(true);
     this.api.register(this.username.trim(), this.email.trim(), this.password).subscribe({
       next: (response) => this.finish(response.token),
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.submitting.set(false);
-        this.error.set('Could not create the account. Check the details or choose another username.');
+        this.error.set(this.registrationError(err));
       },
     });
+  }
+
+  private registrationError(err: HttpErrorResponse): string {
+    if (!err.status) {
+      return 'Could not reach the server. Check your connection and try again.';
+    }
+
+    const detail = this.problemDetail(err.error);
+    if (detail === 'Username already exists' || detail === 'Email already exists') {
+      return `${detail}. Choose different account details.`;
+    }
+    if (err.status === 400) {
+      return detail ?? 'Check the username, email, and password, then try again.';
+    }
+    return 'Could not create the account. Please try again.';
+  }
+
+  private problemDetail(error: unknown): string | null {
+    if (typeof error !== 'object' || error === null || !('detail' in error)) {
+      return null;
+    }
+    return typeof error.detail === 'string' ? error.detail : null;
   }
 
   private finish(token: string): void {
     this.session.setAccessToken(token);
     this.submitting.set(false);
-    void this.router.navigate(['/interactions']);
+    void this.router.navigate(['/customers']);
   }
 }

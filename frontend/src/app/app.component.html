@@ -1,9 +1,37 @@
 <header>
-  <h1>Northstar CRM</h1>
-  @if (session.accessToken()) {
-    <button type="button" (click)="logout()">Log out</button>
+  <div class="brand">
+    <img src="/images/nslogo.png" alt="" />
+    <h1><strong>Northstar CRM</strong></h1>
+  </div>
+  @if (session.isSignedIn()) {
+    <nav class="flex items-center gap-4">
+      @if (session.demoMode()) {
+        <span class="text-sm text-[#59645d]">Local demo</span>
+      }
+      <a
+        routerLink="/customers"
+        routerLinkActive="active-nav-link"
+        [routerLinkActiveOptions]="exactMatch"
+        ariaCurrentWhenActive="page"
+      >Customers</a>
+      <a
+        routerLink="/interactions"
+        routerLinkActive="active-nav-link"
+        [routerLinkActiveOptions]="exactMatch"
+        ariaCurrentWhenActive="page"
+      >Interactions</a>
+      <button class="logout-button" type="button" (click)="openLogoutConfirmation(logoutDialog)">Log out</button>
+    </nav>
   }
 </header>
 <main>
   <router-outlet />
 </main>
+<dialog #logoutDialog class="logout-dialog" aria-labelledby="logout-dialog-title" aria-describedby="logout-dialog-description">
+  <h2 id="logout-dialog-title">Log out?</h2>
+  <p id="logout-dialog-description">Are you sure you want to end your session?</p>
+  <div class="logout-dialog-actions">
+    <button class="cancel-button" type="button" autofocus (click)="logoutDialog.close()">Cancel</button>
+    <button class="confirm-button" type="button" (click)="logout(logoutDialog)">Log out</button>
+  </div>
+</dialog>

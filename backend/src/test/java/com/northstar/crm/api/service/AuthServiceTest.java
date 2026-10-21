@@ -2,10 +2,12 @@ package com.northstar.crm.api.service;
 
 import com.northstar.crm.api.dto.auth.AuthResponseDto;
 import com.northstar.crm.api.dto.auth.LoginRequestDto;
+import com.northstar.crm.api.dto.auth.RegisterRequestDto;
 import com.northstar.crm.domain.UserEntity;
 import com.northstar.crm.repo.UserRepository;
 import com.northstar.crm.security.JwtService;
 import com.northstar.crm.service.AuthService;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -21,6 +24,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
@@ -32,6 +36,9 @@ public class AuthServiceTest {
 
     @Mock
     private AuthenticationManager authenticationManager;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private AuthService authService;
@@ -58,5 +65,29 @@ public class AuthServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.token()).isEqualTo(mockToken);
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+    }
+
+    @Test
+    void register_existingUsername_rejectsRegistration() {
+        RegisterRequestDto request =
+                new RegisterRequestDto("existing", "new@example.com", "password", "AGENT");
+        given(userRepository.existsByUsername(request.username())).willReturn(true);
+
+        Assertions.assertThrows(IllegalArgumentException.class, () -> authService.register(request));
+
+        verify(userRepository, never()).existsByEmail(request.email());
+        verify(userRepository, never()).save(any(UserEntity.class));
+    }
+
+    @Test
+    void register_existingEmail_rejectsRegistration() {
+        RegisterRequestDto request =
+                new RegisterRequestDto("newuser", "existing@example.com", "password", "AGENT");
+        given(userRepository.existsByUsername(request.username())).willReturn(false);
+        given(userRepository.existsByEmail(request.email())).willReturn(true);
+
+        Assertions.assertThrows(IllegalArgumentException.class, () -> authService.register(request));
+
+        verify(userRepository, never()).save(any(UserEntity.class));
     }
 }
