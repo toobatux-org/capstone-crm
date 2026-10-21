@@ -58,12 +58,12 @@ jobs:
         run: |
           set -euo pipefail
           kubectl apply -f deploy/k3s/
-          kubectl set image deployment/backend \
-            backend="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
-          kubectl set image deployment/frontend \
-            frontend="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
-          kubectl rollout status deployment/backend --timeout=180s
-          kubectl rollout status deployment/frontend --timeout=180s
+          kubectl set image deployment/crm-api \
+            crm-api="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
+          kubectl set image deployment/crm-ui \
+            crm-ui="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
+          kubectl rollout status deployment/crm-api --timeout=180s
+          kubectl rollout status deployment/crm-ui --timeout=180s
 
       - name: Smoke test CUS-1001
         env:
@@ -74,16 +74,16 @@ jobs:
           kubectl delete pod smoke-crm --ignore-not-found
           kubectl run smoke-crm --restart=Never --image=curlimages/curl:8.11.1 --command -- sleep 90
           kubectl wait --for=condition=Ready pod/smoke-crm --timeout=90s
-          FRONT_IP=$(kubectl get pod -l app=frontend -o jsonpath='{.items[0].status.podIP}')
+          FRONT_IP=$(kubectl get pod -l app=crm-ui -o jsonpath='{.items[0].status.podIP}')
           kubectl exec smoke-crm -- curl -fsS -o /dev/null -w "UI %{http_code}\n" "http://$FRONT_IP:8080/"
-          TOKEN=$(kubectl exec smoke-crm -- curl -fsS -X POST "http://backend-service:8080/api/v1/auth/login" \
+          TOKEN=$(kubectl exec smoke-crm -- curl -fsS -X POST "http://crm-api-service:8080/api/v1/auth/login" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$SMOKE_USERNAME\",\"password\":\"$SMOKE_PASSWORD\"}" | jq -r .token)
           echo "::add-mask::$TOKEN"
           kubectl exec smoke-crm -- curl -fsS -w "\nAPI %{http_code}\n" \
             -H "Authorization: Bearer $TOKEN" \
             -H "X-Correlation-ID: lab-request-001" \
-            "http://backend-service:8080/api/v1/interactions?customerId=CUS-1001"
+            "http://crm-api-service:8080/api/v1/interactions?customerId=CUS-1001"
           kubectl delete pod smoke-crm --ignore-not-found
 
       - name: Record what was deployed
@@ -94,5 +94,5 @@ jobs:
             echo "### Deployed to k3s namespace \`${NS:-default}\`"
             echo "- crm-api: \`$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}\`"
             echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}\`"
-            echo "- Rollback: \`kubectl rollout undo deployment/backend\`"
+            echo "- Rollback: \`kubectl rollout undo deployment/crm-api\`"
           } >> "$GITHUB_STEP_SUMMARY"
