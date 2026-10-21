@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -152,11 +153,33 @@ export class LoginPageComponent {
     this.submitting.set(true);
     this.api.register(this.username.trim(), this.email.trim(), this.password).subscribe({
       next: (response) => this.finish(response.token),
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.submitting.set(false);
-        this.error.set('Could not create the account. Check the details or choose another username.');
+        this.error.set(this.registrationError(err));
       },
     });
+  }
+
+  private registrationError(err: HttpErrorResponse): string {
+    if (!err.status) {
+      return 'Could not reach the server. Check your connection and try again.';
+    }
+
+    const detail = this.problemDetail(err.error);
+    if (detail === 'Username already exists' || detail === 'Email already exists') {
+      return `${detail}. Choose different account details.`;
+    }
+    if (err.status === 400) {
+      return detail ?? 'Check the username, email, and password, then try again.';
+    }
+    return 'Could not create the account. Please try again.';
+  }
+
+  private problemDetail(error: unknown): string | null {
+    if (typeof error !== 'object' || error === null || !('detail' in error)) {
+      return null;
+    }
+    return typeof error.detail === 'string' ? error.detail : null;
   }
 
   private finish(token: string): void {

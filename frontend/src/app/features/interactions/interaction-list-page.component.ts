@@ -14,10 +14,11 @@ import { Interaction } from './interaction.model';
     <section>
       <header class="mb-6 flex items-baseline justify-between gap-4 border-b border-[#d5d9d6]">
         <h2>Interactions</h2>
-        <p class="text-[#59645d]">Customer <code>{{ customerId }}</code></p>
+        <p class="text-[#59645d]">All customers</p>
       </header>
 
       <form #interactionForm="ngForm" (ngSubmit)="create(interactionForm)" class="grid max-w-[38rem] gap-4" novalidate>
+        <p class="m-0 text-[#59645d]">New interactions are recorded for <code>{{ customerId }}</code>.</p>
         <div class="grid gap-[0.4rem]">
           <label for="interaction-type" class="font-semibold">Interaction type <span aria-hidden="true">*</span></label>
           <select
@@ -107,12 +108,13 @@ import { Interaction } from './interaction.model';
         } @else if (loading()) {
           <p class="text-[#59645d]" role="status">Fetching the customer timeline.</p>
         } @else if (rows().length === 0) {
-          <p class="text-[#59645d]">No interactions recorded for this customer yet.</p>
+          <p class="text-[#59645d]">No interactions have been recorded yet.</p>
         } @else {
           <ul class="m-0 list-none p-0">
             @for (row of rows(); track row.id) {
-              <li class="grid grid-cols-[7rem_1fr_auto_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
+              <li class="grid grid-cols-[7rem_auto_1fr_auto_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
                 <strong>{{ row.interactionType }}</strong>
+                <small class="text-[#59645d]">{{ row.customerId }}</small>
                 <span>{{ row.summary }}</span>
                 <small class="text-[#59645d]">{{ row.createdAt | date: 'medium' }}</small>
                 @if (session.isAdmin()) {
@@ -186,7 +188,7 @@ export class InteractionListPageComponent {
   reload(): void {
     this.loading.set(true);
     this.listError.set(null);
-    this.api.list(this.customerId).subscribe({
+    this.api.listAll().subscribe({
       next: (rows) => {
         this.rows.set(rows);
         this.loading.set(false);

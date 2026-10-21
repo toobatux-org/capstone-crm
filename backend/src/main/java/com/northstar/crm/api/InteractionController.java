@@ -37,8 +37,9 @@ public class InteractionController {
 
   @GetMapping
   @PreAuthorize("hasAnyAuthority('AGENT','ADMIN')")
-  public List<InteractionResponse> list(@RequestParam String customerId) {
-    return interactionService.list(customerId);
+  public List<InteractionResponse> list(
+      @RequestParam(required = false) String customerId) {
+    return customerId == null ? interactionService.listAll() : interactionService.list(customerId);
   }
 
   @PostMapping

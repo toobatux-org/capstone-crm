@@ -39,6 +39,9 @@ public class AuthService {
         if (userRepository.existsByUsername(request.username())) {
             throw new IllegalArgumentException("Username already exists");
         }
+        if (userRepository.existsByEmail(request.email())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
 
         // Create a new user entity and save it to the database
         var user = new UserEntity();

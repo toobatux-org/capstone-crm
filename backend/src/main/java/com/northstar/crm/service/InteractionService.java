@@ -45,15 +45,15 @@ public class InteractionService {
     return interactionRepository
             .findByCustomer_PublicIdOrderByCreatedAtDesc(customerId)
             .stream()
-            .map(
-                    interaction ->
-                            new InteractionResponse(
-                                    interaction.getId(),
-                                    interaction.getCustomer().getPublicId(),
-                                    interaction.getInteractionType(),
-                                    interaction.getSummary(),
-                                    interaction.getCorrelationId(),
-                                    interaction.getCreatedAt()))
+            .map(this::toResponse)
+            .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<InteractionResponse> listAll() {
+    return interactionRepository.findAllByOrderByCreatedAtDesc()
+            .stream()
+            .map(this::toResponse)
             .toList();
   }
 
@@ -123,5 +123,15 @@ public class InteractionService {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Interaction not found");
     }
     interactionRepository.deleteById(id);
+  }
+
+  private InteractionResponse toResponse(InteractionEntity interaction) {
+    return new InteractionResponse(
+            interaction.getId(),
+            interaction.getCustomer().getPublicId(),
+            interaction.getInteractionType(),
+            interaction.getSummary(),
+            interaction.getCorrelationId(),
+            interaction.getCreatedAt());
   }
 }

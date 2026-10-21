@@ -15,6 +15,10 @@ export class InteractionApiService {
    return this.http.get<Interaction[]>(this.base, { params });
   }
 
+  listAll(): Observable<Interaction[]> {
+    return this.http.get<Interaction[]>(this.base);
+  }
+
   // Posts body
   create(body: CreateInteractionRequest): Observable<Interaction> {
     return this.http.post<Interaction>(this.base, body);

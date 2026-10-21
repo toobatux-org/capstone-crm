@@ -7,6 +7,7 @@ import com.northstar.crm.api.dto.InteractionResponse;
 import com.northstar.crm.service.InteractionService;
 import com.northstar.crm.service.UnknownCustomerException;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -129,5 +131,24 @@ class InteractionControllerTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.detail").value("Unknown customer: CUS-9999"))
                 .andExpect(jsonPath("$.correlationId").value("corr-404"));
+    }
+
+    @Test
+    void list_withoutCustomerId_returnsAllInteractions() throws Exception {
+        InteractionResponse response =
+                new InteractionResponse(
+                        UUID.randomUUID(),
+                        "CUS-1002",
+                        "EMAIL",
+                        "Sent a follow-up",
+                        "corr-all",
+                        Instant.now());
+        given(interactionService.listAll()).willReturn(List.of(response));
+
+        mockMvc
+                .perform(get("/api/v1/interactions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].customerId").value("CUS-1002"))
+                .andExpect(jsonPath("$[0].interactionType").value("EMAIL"));
     }
 }
