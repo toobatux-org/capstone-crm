@@ -2,6 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: capstone-ingress
+  namespace: student-18
 spec:
   rules:
     - host: capstone.local
@@ -11,13 +12,13 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: backend-service
+                name: crm-api-service
                 port:
                   number: 8080
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: frontend-service
+                name: crm-ui-service
                 port:
                   number: 80
