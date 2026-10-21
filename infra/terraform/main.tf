@@ -1,4 +1,4 @@
-# One namespace (OpenShift Project) per environment
+# k3s namespace. The environment strategy uses one namespace (default) unless Tom adds more.
 resource "kubernetes_namespace" "crm" {
   for_each = var.environments
 

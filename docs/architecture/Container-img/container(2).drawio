@@ -16,10 +16,10 @@
           <mxGeometry x="40" y="195" width="160" height="70" as="geometry" />
         </mxCell>
 
-        <mxCell id="ocp" value="OpenShift Project" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontStyle=1;arcSize=3;" vertex="1" parent="1">
+        <mxCell id="ocp" value="k3s namespace" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fff2cc;strokeColor=#d6b656;verticalAlign=top;fontStyle=1;arcSize=3;" vertex="1" parent="1">
           <mxGeometry x="290" y="60" width="890" height="430" as="geometry" />
         </mxCell>
-        <mxCell id="route" value="&lt;b&gt;Route&lt;/b&gt;&lt;br&gt;TLS edge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="route" value="&lt;b&gt;Ingress&lt;/b&gt;&lt;br&gt;TLS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;" vertex="1" parent="1">
           <mxGeometry x="320" y="195" width="110" height="70" as="geometry" />
         </mxCell>
         <mxCell id="nginx" value="&lt;b&gt;crm-ui&lt;/b&gt;&lt;br&gt;nginx :8080&lt;br&gt;serves Angular,&lt;br&gt;forwards /api/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
