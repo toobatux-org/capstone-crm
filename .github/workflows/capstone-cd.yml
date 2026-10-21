@@ -86,9 +86,13 @@ jobs:
           kubectl wait --for=condition=Ready pod/smoke-crm --timeout=90s
           FRONT_IP=$(kubectl get pod -l app=crm-ui -o jsonpath='{.items[0].status.podIP}')
           kubectl exec smoke-crm -- curl -fsS -o /dev/null -w "UI %{http_code}\n" "http://$FRONT_IP:8080/"
-          TOKEN=$(kubectl exec smoke-crm -- curl -fsS -X POST "http://crm-api-service:8080/api/v1/auth/login" \
+          # jq encodes the password. A double-quoted -d string changes $, quotes, and backslashes.
+          jq -n --arg username "$SMOKE_USERNAME" --arg password "$SMOKE_PASSWORD" \
+            '{username:$username, password:$password}' > "$RUNNER_TEMP/login.json"
+          TOKEN=$(kubectl exec -i smoke-crm -- curl -fsS -X POST "http://crm-api-service:8080/api/v1/auth/login" \
             -H "Content-Type: application/json" \
-            -d "{\"username\":\"$SMOKE_USERNAME\",\"password\":\"$SMOKE_PASSWORD\"}" | jq -r .token)
+            --data-binary @- < "$RUNNER_TEMP/login.json" | jq -r .token)
+          rm -f "$RUNNER_TEMP/login.json"
           echo "::add-mask::$TOKEN"
           kubectl exec smoke-crm -- curl -fsS -w "\nAPI %{http_code}\n" \
             -H "Authorization: Bearer $TOKEN" \
