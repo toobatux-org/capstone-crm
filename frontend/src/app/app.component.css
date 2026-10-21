@@ -49,14 +49,52 @@ nav {
   margin-left: auto;
 }
 
-.signed-in {
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   max-width: 14rem;
+  min-width: 0;
+  padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+  border: 1px solid #ffffff2e;
+  border-radius: 999px;
+  background: #ffffff14;
+}
+
+.agent-avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #176b54;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.agent-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.agent-name {
   overflow: hidden;
-  color: #e5eee8;
-  font-size: 0.9rem;
-  font-weight: 600;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.agent-role {
+  color: #9de2c2;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 nav a {
@@ -175,7 +213,7 @@ main {
   .header-bar { align-items: flex-start; flex-wrap: wrap; }
   h1 { font-size: 1.05rem; }
   nav { width: 100%; }
-  .signed-in { max-width: 9rem; }
+  .agent-card { max-width: 11rem; }
   nav a.active-nav-link::after { bottom: -0.45rem; }
   .logout-dialog-actions { flex-direction: column-reverse; }
   .logout-dialog-actions button { width: 100%; }
