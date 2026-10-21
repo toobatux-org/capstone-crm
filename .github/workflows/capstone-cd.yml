@@ -77,8 +77,8 @@ jobs:
 
       - name: Smoke test CUS-1001
         env:
-          SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
-          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_USERNAME: ${{ secrets.CRM_ADMIN_USERNAME }}
+          SMOKE_PASSWORD: ${{ secrets.CRM_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
           kubectl delete pod smoke-crm --ignore-not-found
