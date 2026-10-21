@@ -32,6 +32,8 @@ class InteractionApiIT {
     registry.add("spring.datasource.username", () -> "crm");
     registry.add("spring.datasource.password", () -> "change-me");
     registry.add("spring.security.jwt.secret", () -> JWT_SECRET);
+    registry.add("app.admin.username", () -> "it-admin");
+    registry.add("app.admin.password", () -> "test-pass-1");
   }
 
   @Autowired MockMvc mockMvc;
@@ -102,8 +104,8 @@ class InteractionApiIT {
 
   @Test
   void authFlow_agentAndAdmin() throws Exception {
-    String agent = registerAndLogin("agent");
-    String admin = registerAndLogin("admin");
+    String agent = registerAndLogin("ADMIN");
+    String admin = loginSeededAdmin();
 
     MvcResult created =
         mockMvc
@@ -171,6 +173,22 @@ class InteractionApiIT {
                         {"username":"%s","password":"test-pass-1"}
                         """
                             .formatted(name)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").isNotEmpty())
+            .andReturn();
+    return JsonPath.read(login.getResponse().getContentAsString(), "$.token");
+  }
+
+  private String loginSeededAdmin() throws Exception {
+    MvcResult login =
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"username":"it-admin","password":"test-pass-1"}
+                        """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.token").isNotEmpty())
             .andReturn();
