@@ -2,6 +2,8 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { CustomerApiService } from '../customers/customer-api.service';
+import { Customer } from '../customers/customer.model';
 import { InteractionApiService } from './interaction-api.service';
 import { Interaction } from './interaction.model';
 
@@ -18,7 +20,44 @@ import { Interaction } from './interaction.model';
       </header>
 
       <form #interactionForm="ngForm" (ngSubmit)="create(interactionForm)" class="grid max-w-[38rem] gap-4" novalidate>
-        <p class="m-0 text-[#59645d]">New interactions are recorded for <code>{{ customerId }}</code>.</p>
+        <div class="grid gap-[0.4rem]">
+          <label for="customer-id" class="font-semibold">Customer <span aria-hidden="true">*</span></label>
+          <select
+            id="customer-id"
+            name="customerId"
+            class="w-full box-border rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
+            [(ngModel)]="customerId"
+            #customerControl="ngModel"
+            required
+            [disabled]="customersLoading() || customers().length === 0"
+            aria-describedby="customer-hint customer-error"
+            data-testid="customer-select"
+          >
+            <option value="" disabled>Select a customer</option>
+            @for (customer of customers(); track customer.customerId) {
+              <option [value]="customer.customerId">{{ customer.fullName }} ({{ customer.customerId }})</option>
+            }
+          </select>
+          @if (customersLoading()) {
+            <span id="customer-hint" class="text-[#59645d]" role="status">Loading customers...</span>
+          } @else if (customersError()) {
+            <span id="customer-hint" class="text-[#9d2929]" role="alert">{{ customersError() }}</span>
+            <button
+              type="button"
+              class="justify-self-start cursor-pointer rounded-[3px] border border-[#87938b] bg-white px-3 py-1 font-[inherit] font-semibold"
+              (click)="loadCustomers()"
+            >Retry loading customers</button>
+          } @else {
+            <span id="customer-hint" class="text-[#59645d]">Choose which customer this interaction is for.</span>
+            @if (customers().length === 0) {
+              <span class="text-[#59645d]" role="status">No customers are available.</span>
+            }
+          }
+          @if ((customerControl.touched || interactionForm.submitted) && customerControl.invalid) {
+            <p id="customer-error" class="m-0 text-[0.9rem] text-[#9d2929]">Select a customer.</p>
+          }
+        </div>
+
         <div class="grid gap-[0.4rem]">
           <label for="interaction-type" class="font-semibold">Interaction type <span aria-hidden="true">*</span></label>
           <select
@@ -77,7 +116,7 @@ import { Interaction } from './interaction.model';
         <button
           type="submit"
           class="justify-self-start cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-4 py-[0.65rem] font-[inherit] font-semibold text-white focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54] disabled:cursor-wait disabled:opacity-[0.65]"
-          [disabled]="saving()"
+          [disabled]="saving() || customersLoading() || customers().length === 0"
           data-testid="create"
         >
           {{ saving() ? 'Recording...' : 'Record interaction' }}
@@ -194,9 +233,10 @@ import { Interaction } from './interaction.model';
 })
 export class InteractionListPageComponent {
   private readonly api = inject(InteractionApiService);
+  private readonly customerApi = inject(CustomerApiService);
   readonly session = inject(AuthSessionService);
 
-  readonly customerId = 'CUS-1001';
+  customerId = 'CUS-1001';
   readonly interactionTypes = ['CALL', 'EMAIL', 'NOTE', 'MEETING'];
   interactionType = '';
   summary = '';
@@ -210,16 +250,44 @@ export class InteractionListPageComponent {
   readonly createError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
   readonly updateError = signal<string | null>(null);
+  readonly customers = signal<Customer[]>([]);
+  readonly customersLoading = signal(false);
+  readonly customersError = signal<string | null>(null);
   editType = '';
   editSummary = '';
 
   constructor() {
+    this.loadCustomers();
     this.reload();
+  }
+
+  loadCustomers(): void {
+    this.customersLoading.set(true);
+    this.customersError.set(null);
+    this.customerApi.search('').subscribe({
+      next: (customers) => {
+        this.customers.set(customers);
+        if (!customers.some((customer) => customer.customerId === this.customerId)) {
+          this.customerId = customers[0]?.customerId ?? '';
+        }
+        this.customersLoading.set(false);
+      },
+      error: (err) => {
+        this.customersLoading.set(false);
+        this.customersError.set(this.message('load customers', err));
+      },
+    });
   }
 
   create(form: NgForm): void {
     this.createError.set(null);
-    if (form.invalid || !this.summary.trim() || this.summary.length > 1024 || this.saving()) {
+    if (
+      form.invalid ||
+      !this.customerId ||
+      !this.summary.trim() ||
+      this.summary.length > 1024 ||
+      this.saving()
+    ) {
       form.control.markAllAsTouched();
       return;
     }
@@ -235,7 +303,7 @@ export class InteractionListPageComponent {
       .subscribe({
         next: () => {
           this.saving.set(false);
-          form.resetForm({ interactionType: '', summary: '' });
+          form.resetForm({ customerId: this.customerId, interactionType: '', summary: '' });
           this.reload();
         },
         error: (err) => {

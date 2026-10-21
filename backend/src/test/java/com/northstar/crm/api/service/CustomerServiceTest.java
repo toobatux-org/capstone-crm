@@ -48,8 +48,11 @@ class CustomerServiceTest {
   }
 
   @Test
-  void search_blankQueryReturnsNoCustomers() {
-    assertThat(customerService.search("   ")).isEmpty();
+  void search_blankQueryReturnsCustomerOptions() {
+    given(customerRepository.findTop50ByOrderByFullNameAsc()).willReturn(List.of(customer));
+
+    assertThat(customerService.search("   ")).hasSize(1);
+    verify(customerRepository).findTop50ByOrderByFullNameAsc();
   }
 
   @Test

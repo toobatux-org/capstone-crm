@@ -20,7 +20,9 @@ public class CustomerService {
   public List<CustomerResponse> search(String query) {
     String normalizedQuery = query == null ? "" : query.trim();
     if (normalizedQuery.isEmpty()) {
-      return List.of();
+      return customerRepository.findTop50ByOrderByFullNameAsc().stream()
+          .map(this::toResponse)
+          .toList();
     }
 
     return customerRepository
