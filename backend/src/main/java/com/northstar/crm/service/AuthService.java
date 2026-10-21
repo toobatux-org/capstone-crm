@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 
 @Slf4j
 @Service
@@ -51,7 +52,7 @@ public class AuthService {
         user.setUsername(request.username());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRoles(List.of(UserRole.AGENT));
+        user.setRoles(List.of(requestedRole(request.role())));
         userRepository.save(user);
 
         log.atInfo()
@@ -99,5 +100,13 @@ public class AuthService {
                 .log("User logged in successfully");
 
         return new AuthResponseDto(jwtToken);
+    }
+
+    private UserRole requestedRole(String role) {
+        try {
+            return UserRole.valueOf(role.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new IllegalArgumentException("Role must be AGENT or ADMIN");
+        }
     }
 }
