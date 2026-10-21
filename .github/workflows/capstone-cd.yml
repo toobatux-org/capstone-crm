@@ -55,13 +55,23 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to cluster
+        env:
+          API_DIGEST: ${{ inputs.api_digest }}
+          UI_DIGEST: ${{ inputs.ui_digest }}
         run: |
           set -euo pipefail
+          # Accept "sha256:...", "crm-api@sha256:...", or the full image reference.
+          API_DIGEST="${API_DIGEST##*@}"
+          UI_DIGEST="${UI_DIGEST##*@}"
+          case "$API_DIGEST" in sha256:*) ;; *) echo "api_digest must start with sha256:"; exit 1 ;; esac
+          case "$UI_DIGEST" in sha256:*) ;; *) echo "ui_digest must start with sha256:"; exit 1 ;; esac
+          echo "API_DIGEST=$API_DIGEST" >> "$GITHUB_ENV"
+          echo "UI_DIGEST=$UI_DIGEST" >> "$GITHUB_ENV"
           kubectl apply -f deploy/k3s/
           kubectl set image deployment/crm-api \
-            crm-api="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
+            crm-api="$REGISTRY_PATH/crm-api@$API_DIGEST"
           kubectl set image deployment/crm-ui \
-            crm-ui="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
+            crm-ui="$REGISTRY_PATH/crm-ui@$UI_DIGEST"
           kubectl rollout status deployment/crm-api --timeout=180s
           kubectl rollout status deployment/crm-ui --timeout=180s
 
@@ -92,7 +102,7 @@ jobs:
           NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
           {
             echo "### Deployed to k3s namespace \`${NS:-default}\`"
-            echo "- crm-api: \`$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}\`"
-            echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}\`"
+            echo "- crm-api: \`$REGISTRY_PATH/crm-api@$API_DIGEST\`"
+            echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@$UI_DIGEST\`"
             echo "- Rollback: \`kubectl rollout undo deployment/crm-api\`"
           } >> "$GITHUB_STEP_SUMMARY"
