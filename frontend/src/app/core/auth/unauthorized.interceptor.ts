@@ -9,7 +9,8 @@ export const unauthorizedInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   return next(req).pipe(
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 401 && !req.url.includes('/api/v1/auth/')) {
+      const failedDelete = req.method === 'DELETE';
+      if (err.status === 401 && !req.url.includes('/api/v1/auth/') && !failedDelete) {
         session.logout();
         void router.navigate(['/login']);
       }
