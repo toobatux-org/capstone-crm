@@ -8,19 +8,21 @@ import { Interaction } from './interaction.model';
   selector: 'app-interaction-list-page',
   standalone: true,
   imports: [DatePipe, FormsModule],
+  host: { class: 'block max-w-[54rem]' },
   template: `
-    <section class="interactions-page">
-      <header class="page-heading">
+    <section>
+      <header class="mb-6 flex items-baseline justify-between gap-4 border-b border-[#d5d9d6]">
         <h2>Interactions</h2>
-        <p>Customer <code>{{ customerId }}</code></p>
+        <p class="text-[#59645d]">Customer <code>{{ customerId }}</code></p>
       </header>
 
-      <form #interactionForm="ngForm" (ngSubmit)="create(interactionForm)" novalidate>
-        <div class="field">
-          <label for="interaction-type">Interaction type <span aria-hidden="true">*</span></label>
+      <form #interactionForm="ngForm" (ngSubmit)="create(interactionForm)" class="grid max-w-[38rem] gap-4" novalidate>
+        <div class="grid gap-[0.4rem]">
+          <label for="interaction-type" class="font-semibold">Interaction type <span aria-hidden="true">*</span></label>
           <select
             id="interaction-type"
             name="interactionType"
+            class="w-full box-border rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
             [(ngModel)]="interactionType"
             #typeControl="ngModel"
             required
@@ -31,17 +33,18 @@ import { Interaction } from './interaction.model';
               <option [value]="type">{{ type }}</option>
             }
           </select>
-          <span id="type-hint" class="field-hint">Choose the kind of customer interaction.</span>
+          <span id="type-hint" class="text-[#59645d]">Choose the kind of customer interaction.</span>
           @if ((typeControl.touched || interactionForm.submitted) && typeControl.invalid) {
-            <p id="type-error" class="field-error">Select an interaction type.</p>
+            <p id="type-error" class="m-0 text-[0.9rem] text-[#9d2929]">Select an interaction type.</p>
           }
         </div>
 
-        <div class="field">
-          <label for="interaction-summary">Summary <span aria-hidden="true">*</span></label>
+        <div class="grid gap-[0.4rem]">
+          <label for="interaction-summary" class="font-semibold">Summary <span aria-hidden="true">*</span></label>
           <textarea
             id="interaction-summary"
             name="summary"
+            class="w-full box-border resize-y rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
             [(ngModel)]="summary"
             #summaryControl="ngModel"
             required
@@ -50,12 +53,12 @@ import { Interaction } from './interaction.model';
             aria-describedby="summary-hint summary-error summary-count"
             data-testid="summary"
           ></textarea>
-          <div class="field-meta">
-            <span id="summary-hint" class="field-hint">Add a brief note, up to 1024 characters.</span>
-            <span id="summary-count" class="field-hint">{{ summary.length }}/1024</span>
+          <div class="flex items-baseline justify-between gap-4 text-sm">
+            <span id="summary-hint" class="text-[#59645d]">Add a brief note, up to 1024 characters.</span>
+            <span id="summary-count" class="text-[#59645d]">{{ summary.length }}/1024</span>
           </div>
           @if ((summaryControl.touched || interactionForm.submitted) && (!summary.trim() || summary.length > 1024)) {
-            <p id="summary-error" class="field-error">
+            <p id="summary-error" class="m-0 text-[0.9rem] text-[#9d2929]">
               @if (!summary.trim()) {
                 Enter a summary.
               } @else {
@@ -66,69 +69,53 @@ import { Interaction } from './interaction.model';
         </div>
 
         @if (createError()) {
-          <p class="state-error" role="alert">{{ createError() }}</p>
+          <p class="max-w-[38rem] text-[#9d2929]" role="alert">{{ createError() }}</p>
         }
 
-        <button type="submit" [disabled]="saving()" data-testid="create">
+        <button
+          type="submit"
+          class="justify-self-start cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-4 py-[0.65rem] font-[inherit] font-semibold text-white focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54] disabled:cursor-wait disabled:opacity-[0.65]"
+          [disabled]="saving()"
+          data-testid="create"
+        >
           {{ saving() ? 'Recording...' : 'Record interaction' }}
         </button>
       </form>
 
-      <section class="timeline" aria-labelledby="timeline-heading" [attr.aria-busy]="loading()">
-        <div class="timeline-heading">
-          <h3 id="timeline-heading">Recent activity</h3>
+      <section class="mt-8 border-t border-[#d5d9d6] pt-4" aria-labelledby="timeline-heading" [attr.aria-busy]="loading()">
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 id="timeline-heading" class="m-0">Recent activity</h3>
           @if (loading()) {
-            <span class="field-hint" role="status">Loading interactions...</span>
+            <span class="text-[#59645d]" role="status">Loading interactions...</span>
           }
         </div>
 
         @if (listError()) {
-          <div class="state-error" role="alert">
+          <div class="max-w-[38rem] text-[#9d2929]" role="alert">
             <p>{{ listError() }}</p>
-            <button type="button" (click)="reload()">Try again</button>
+            <button
+              type="button"
+              class="justify-self-start cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-4 py-[0.65rem] font-[inherit] font-semibold text-white focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
+              (click)="reload()"
+            >Try again</button>
           </div>
         } @else if (loading()) {
-          <p class="state-message" role="status">Fetching the customer timeline.</p>
+          <p class="text-[#59645d]" role="status">Fetching the customer timeline.</p>
         } @else if (rows().length === 0) {
-          <p class="state-message">No interactions recorded for this customer yet.</p>
+          <p class="text-[#59645d]">No interactions recorded for this customer yet.</p>
         } @else {
-          <ul>
+          <ul class="m-0 list-none p-0">
             @for (row of rows(); track row.id) {
-              <li data-testid="interaction-row">
+              <li class="grid grid-cols-[7rem_1fr_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
                 <strong>{{ row.interactionType }}</strong>
                 <span>{{ row.summary }}</span>
-                <small>{{ row.createdAt | date: 'medium' }}</small>
+                <small class="text-[#59645d]">{{ row.createdAt | date: 'medium' }}</small>
               </li>
             }
           </ul>
         }
       </section>
     </section>
-  `,
-  styles: `
-    :host { display: block; max-width: 54rem; }
-    .page-heading, .timeline-heading, .field-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
-    .page-heading { border-bottom: 1px solid #d5d9d6; margin-bottom: 1.5rem; }
-    .page-heading p, .field-hint, small { color: #59645d; }
-    form { display: grid; gap: 1rem; max-width: 38rem; }
-    .field { display: grid; gap: 0.4rem; }
-    label { font-weight: 600; }
-    input, select, textarea { box-sizing: border-box; width: 100%; border: 1px solid #87938b; border-radius: 3px; padding: 0.65rem; font: inherit; background: #fff; color: #18221b; }
-    textarea { resize: vertical; }
-    input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid #176b54; outline-offset: 2px; }
-    .field-meta { font-size: 0.875rem; }
-    .field-error, .state-error { color: #9d2929; }
-    .field-error { margin: 0; font-size: 0.9rem; }
-    button { justify-self: start; border: 0; border-radius: 3px; padding: 0.65rem 1rem; background: #176b54; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-    button:disabled { cursor: wait; opacity: 0.65; }
-    .timeline { margin-top: 2rem; border-top: 1px solid #d5d9d6; padding-top: 1rem; }
-    .timeline h3 { margin: 0; }
-    .state-message { color: #59645d; }
-    .state-error { max-width: 38rem; }
-    .state-error p { margin: 0 0 0.75rem; }
-    ul { list-style: none; margin: 0; padding: 0; }
-    li { display: grid; grid-template-columns: 7rem 1fr auto; gap: 1rem; align-items: baseline; border-bottom: 1px solid #e1e5e2; padding: 0.85rem 0; }
-    @media (max-width: 36rem) { li { grid-template-columns: 1fr; gap: 0.25rem; } }
   `,
 })
 export class InteractionListPageComponent {

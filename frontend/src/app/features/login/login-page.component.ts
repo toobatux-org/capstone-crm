@@ -7,10 +7,9 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
   standalone: true,
   template: `
     <section>
-      <h2>Sign in</h2>
-      <p>Mock login stores a demo Bearer token in memory only — not localStorage.</p>
-      <p>XSS probe (must stay text): {{ xssProbe }}</p>
-      <button type="button" (click)="login()">Mock login</button>
+      <button type="button" (click)="login()">Sign in</button>
+      <!-- <p>Mock login stores a demo Bearer token in memory only — not localStorage.</p>
+      <p>XSS probe (must stay text): {{ xssProbe }}</p> -->
     </section>
   `,
 })
