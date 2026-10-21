@@ -53,11 +53,11 @@ public class InteractionService {
               return new UnknownCustomerException(customerId);
             });
 
-    List<InteractionResponse> responses = interactionRepository
-            .findByCustomer_PublicIdOrderByCreatedAtDesc(customerId)
-            .stream()
-            .map(this::toResponse)
-            .toList();
+      return interactionRepository
+              .findByCustomer_PublicIdOrderByCreatedAtDesc(customerId)
+              .stream()
+              .map(this::toResponse)
+              .toList();
   }
 
   @Transactional(readOnly = true)
