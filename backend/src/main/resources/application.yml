@@ -29,3 +29,12 @@ spring:
     consumer:
       group-id: crm-interaction-consumer
       auto-offset-reset: earliest
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.northstar.crm: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

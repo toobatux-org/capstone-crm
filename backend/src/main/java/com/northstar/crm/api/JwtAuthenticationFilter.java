@@ -1,13 +1,16 @@
 package com.northstar.crm.api;
 
 import com.northstar.crm.security.JwtService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,6 +25,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Not a production IdP. OPTIONS (CORS preflight) is skipped.
  */
 @Component
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtService jwtService;
@@ -39,32 +43,49 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
           @NonNull FilterChain filterChain
   ) throws ServletException, IOException {
     final String authHeader = request.getHeader("Authorization");
-    final String jwt;
-    final String username;
 
     if (authHeader == null || !authHeader.startsWith("Bearer")) {
       filterChain.doFilter(request, response);
       return;
     }
 
-    // Extract token and username
-    jwt = authHeader.substring(7);
-    username = jwtService.extractUsername(jwt);
+    final String jwt;
+    final String username;
 
-    // If username is not null and the user is not already authenticated, validate the token and set authentication
-    if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-      UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+    try {
+      // Extract token and username
+      jwt = authHeader.substring(7);
+      username = jwtService.extractUsername(jwt);
 
-      if (jwtService.isTokenValid(jwt, userDetails)) {
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
+      // If username is not null and the user is not already authenticated, validate the token and set authentication
+      if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
-        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authToken);
+        if (jwtService.isTokenValid(jwt, userDetails)) {
+          UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                  userDetails,
+                  null,
+                  userDetails.getAuthorities()
+          );
+
+          authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+          SecurityContextHolder.getContext().setAuthentication(authToken);
+        } else {
+          log.atWarn()
+                  .addKeyValue("event", "user.token.rejected")
+                  .addKeyValue("reason", "invalid")
+                  .log("Bearer token was rejected");
+          response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+          return;
+        }
       }
+    } catch (JwtException | IllegalArgumentException | AuthenticationException ex) {
+      log.atWarn()
+              .addKeyValue("event", "user.token.rejected")
+              .addKeyValue("exception", ex.getClass().getSimpleName())
+              .log("Bearer token could not be authenticated");
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
     }
 
     filterChain.doFilter(request, response);
