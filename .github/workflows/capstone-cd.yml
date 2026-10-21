@@ -1,4 +1,4 @@
-# Deploys image digests produced by "Capstone Images". Never rebuilds.
+# Deploys image digests produced by "Capstone Images" onto k3s. Never rebuilds.
 name: Capstone CD
 
 on:
@@ -22,52 +22,58 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}   # stage/prod wait for reviewer approval
+    environment: ${{ inputs.environment }} # stage/prod wait for reviewer approval
     env:
-      PROJECT: crm-${{ inputs.environment }}
       REGISTRY_PATH: ghcr.io/toobatux/capstone-crm
     steps:
-      - name: Install oc
-        uses: redhat-actions/openshift-tools-installer@v1
-        with:
-          oc: "4"
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Log in to OpenShift
+      - name: Set up kubeconfig
         run: |
-          oc login --server="${{ secrets.OPENSHIFT_SERVER }}" --token="${{ secrets.OPENSHIFT_TOKEN }}"
-          oc project "$PROJECT"
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
 
-      - name: Deploy pinned digests (no rebuild)
+      - name: Deploy to cluster
         run: |
           set -euo pipefail
-          oc set image deployment/crm-api crm-api="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
-          oc set image deployment/crm-ui  crm-ui="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
-          oc rollout status deployment/crm-api --timeout=180s
-          oc rollout status deployment/crm-ui  --timeout=180s
+          kubectl apply -f deploy/k3s/
+          kubectl set image deployment/backend \
+            backend="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
+          kubectl set image deployment/frontend \
+            frontend="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
+          kubectl rollout status deployment/backend --timeout=180s
+          kubectl rollout status deployment/frontend --timeout=180s
 
-      - name: Smoke test CUS-1001 through the Route
+      - name: Smoke test CUS-1001
         env:
           SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: |
           set -euo pipefail
-          HOST=$(oc get route crm-ui -o jsonpath='{.spec.host}')
-          curl -fsS -o /dev/null -w "UI %{http_code}\n" "https://$HOST/"
-          TOKEN=$(curl -fsS -X POST "https://$HOST/api/v1/auth/login" \
+          kubectl delete pod smoke-crm --ignore-not-found
+          kubectl run smoke-crm --restart=Never --image=curlimages/curl:8.11.1 --command -- sleep 90
+          kubectl wait --for=condition=Ready pod/smoke-crm --timeout=90s
+          FRONT_IP=$(kubectl get pod -l app=frontend -o jsonpath='{.items[0].status.podIP}')
+          kubectl exec smoke-crm -- curl -fsS -o /dev/null -w "UI %{http_code}\n" "http://$FRONT_IP:8080/"
+          TOKEN=$(kubectl exec smoke-crm -- curl -fsS -X POST "http://backend-service:8080/api/v1/auth/login" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$SMOKE_USERNAME\",\"password\":\"$SMOKE_PASSWORD\"}" | jq -r .token)
           echo "::add-mask::$TOKEN"
-          curl -fsS -w "\nAPI %{http_code}\n" \
+          kubectl exec smoke-crm -- curl -fsS -w "\nAPI %{http_code}\n" \
             -H "Authorization: Bearer $TOKEN" \
             -H "X-Correlation-ID: lab-request-001" \
-            "https://$HOST/api/v1/interactions?customerId=CUS-1001"
+            "http://backend-service:8080/api/v1/interactions?customerId=CUS-1001"
+          kubectl delete pod smoke-crm --ignore-not-found
 
       - name: Record what was deployed
         if: always()
         run: |
+          NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
           {
-            echo "### Deployed to $PROJECT"
+            echo "### Deployed to k3s namespace \`${NS:-default}\`"
             echo "- crm-api: \`$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}\`"
             echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}\`"
-            echo "- Rollback: \`oc rollout undo deployment/crm-api -n $PROJECT\`"
+            echo "- Rollback: \`kubectl rollout undo deployment/backend\`"
           } >> "$GITHUB_STEP_SUMMARY"
