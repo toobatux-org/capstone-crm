@@ -75,7 +75,7 @@ import { environment } from '../../../environments/environment';
             <button type="button" class="secondary" data-testid="register" (click)="showRegister()" [disabled]="submitting()">
               Register
             </button>
-            @if (testSignInEnabled) {
+            @if (localDemoSignInEnabled) {
               <button
                 type="button"
                 class="secondary"
@@ -89,7 +89,7 @@ import { environment } from '../../../environments/environment';
           }
         </div>
       </form>
-      @if (!registering() && testSignInEnabled) {
+      @if (!registering() && localDemoSignInEnabled) {
         <p class="probe">Uses sample data in this browser. No server connection or account is required.</p>
       }
     </section>
@@ -125,7 +125,7 @@ export class LoginPageComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly registering = signal(false);
-  readonly testSignInEnabled = environment.testSignInEnabled;
+  readonly localDemoSignInEnabled = environment.localDemoSignInEnabled;
 
   submitLabel(): string {
     if (this.submitting()) {
@@ -153,7 +153,7 @@ export class LoginPageComponent {
   }
 
   startDemo(): void {
-    if (!this.testSignInEnabled || this.submitting() || this.registering()) {
+    if (!this.localDemoSignInEnabled || this.submitting() || this.registering()) {
       return;
     }
     this.session.startDemoSession();

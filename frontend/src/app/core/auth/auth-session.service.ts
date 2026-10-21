@@ -1,7 +1,7 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
-/** In-memory access token. Not written to localStorage. */
+/** In-memory access token. Local demo auth is enabled only in development builds. */
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
   readonly accessToken = signal<string | null>(null);
@@ -15,7 +15,7 @@ export class AuthSessionService {
   }
 
   startDemoSession(): void {
-    if (!environment.testSignInEnabled) {
+    if (!environment.localDemoSignInEnabled) {
       throw new Error('Local demo sign-in is only available in development builds.');
     }
     this.accessToken.set(null);
