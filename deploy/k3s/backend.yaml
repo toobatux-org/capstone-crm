@@ -35,6 +35,9 @@ spec:
             periodSeconds: 15
           # ---------------------
 
+          envFrom:
+            - secretRef:
+                name: crm-backend-secrets
           env:
             - name: SPRING_DATASOURCE_URL
               value: jdbc:postgresql://postgres-service:5432/mydb

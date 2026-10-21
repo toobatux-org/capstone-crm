@@ -35,6 +35,25 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
 
+      - name: Apply cluster secrets
+        env:
+          SPRING_SECURITY_JWT_SECRET: ${{ secrets.SPRING_SECURITY_JWT_SECRET }}
+          CRM_ADMIN_USERNAME: ${{ secrets.CRM_ADMIN_USERNAME }}
+          CRM_ADMIN_PASSWORD: ${{ secrets.CRM_ADMIN_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          set -euo pipefail
+          kubectl create secret generic crm-backend-secrets \
+            --from-literal=SPRING_SECURITY_JWT_SECRET="$SPRING_SECURITY_JWT_SECRET" \
+            --from-literal=CRM_ADMIN_USERNAME="$CRM_ADMIN_USERNAME" \
+            --from-literal=CRM_ADMIN_PASSWORD="$CRM_ADMIN_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic postgres-secret \
+            --from-literal=POSTGRES_USER=myuser \
+            --from-literal=POSTGRES_DB=mydb \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy to cluster
         run: |
           set -euo pipefail

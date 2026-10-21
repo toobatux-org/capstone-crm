@@ -29,3 +29,9 @@ spring:
     consumer:
       group-id: crm-interaction-consumer
       auto-offset-reset: earliest
+
+app:
+  admin:
+    username: ${CRM_ADMIN_USERNAME:}
+    email: ${CRM_ADMIN_EMAIL:}
+    password: ${CRM_ADMIN_PASSWORD:}
