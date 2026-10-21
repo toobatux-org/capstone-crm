@@ -13,7 +13,17 @@
         ariaCurrentWhenActive="page"
       >Customers</a>
       <div class="account">
-        <span class="signed-in" data-testid="current-agent">{{ session.username() }} · {{ session.isAdmin() ? 'Admin' : 'Agent' }}</span>
+        <div
+          class="agent-card"
+          data-testid="current-agent"
+          [attr.aria-label]="'Signed in as ' + session.username() + ', ' + roleLabel()"
+        >
+          <span class="agent-avatar" aria-hidden="true">{{ initials() }}</span>
+          <span class="agent-meta">
+            <span class="agent-name">{{ session.username() }}</span>
+            <span class="agent-role">{{ roleLabel() }}</span>
+          </span>
+        </div>
         <button class="logout-button" type="button" (click)="openLogoutConfirmation(logoutDialog)">Log out</button>
       </div>
     </nav>
