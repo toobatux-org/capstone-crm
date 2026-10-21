@@ -2,14 +2,16 @@ package com.northstar.crm.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 import com.northstar.crm.domain.CustomerEntity;
 import com.northstar.crm.repo.CustomerRepository;
+import com.northstar.crm.repo.InteractionRepository;
 import com.northstar.crm.service.CustomerService;
 import com.northstar.crm.service.UnknownCustomerException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -17,42 +19,41 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class CustomerServiceTest {
 
   @Mock private CustomerRepository customerRepository;
+  @Mock private InteractionRepository interactionRepository;
   @Mock private CustomerEntity customer;
   @InjectMocks private CustomerService customerService;
 
   @Test
   void search_trimsQueryAndMapsCustomers() {
-    Instant createdAt = Instant.parse("2026-01-15T10:00:00Z");
     given(customer.getPublicId()).willReturn("CUS-1001");
     given(customer.getFullName()).willReturn("Amina Khan");
     given(customer.getStatus()).willReturn("ACTIVE");
-    given(customer.getCreatedAt()).willReturn(createdAt);
     given(
-            customerRepository
-                .findTop50ByPublicIdContainingIgnoreCaseOrFullNameContainingIgnoreCaseOrderByFullNameAsc(
-                    "Amina", "Amina"))
-        .willReturn(List.of(customer));
+            customerRepository.findByPublicIdContainingIgnoreCaseOrFullNameContainingIgnoreCase(
+                eq("Amina"), eq("Amina"), any(Pageable.class)))
+        .willReturn(new PageImpl<>(List.of(customer)));
 
-    var results = customerService.search("  Amina  ");
+    var results = customerService.search("  Amina  ", 0, 10);
 
-    assertThat(results).hasSize(1);
-    assertThat(results.getFirst().customerId()).isEqualTo("CUS-1001");
-    assertThat(results.getFirst().fullName()).isEqualTo("Amina Khan");
-    assertThat(results.getFirst().status()).isEqualTo("ACTIVE");
-    assertThat(results.getFirst().createdAt()).isEqualTo(createdAt);
+    assertThat(results.content()).hasSize(1);
+    assertThat(results.content().getFirst().publicId()).isEqualTo("CUS-1001");
+    assertThat(results.content().getFirst().fullName()).isEqualTo("Amina Khan");
+    assertThat(results.content().getFirst().status()).isEqualTo("ACTIVE");
   }
 
   @Test
   void search_blankQueryReturnsCustomerOptions() {
-    given(customerRepository.findTop50ByOrderByFullNameAsc()).willReturn(List.of(customer));
+    given(customerRepository.findAll(any(Pageable.class))).willReturn(new PageImpl<>(List.of(customer)));
 
-    assertThat(customerService.search("   ")).hasSize(1);
-    verify(customerRepository).findTop50ByOrderByFullNameAsc();
+    assertThat(customerService.search("   ", 0, 10).content()).hasSize(1);
+    verify(customerRepository).findAll(any(Pageable.class));
   }
 
   @Test
@@ -64,16 +65,14 @@ class CustomerServiceTest {
 
   @Test
   void get_existingCustomerReturnsProfile() {
-    Instant createdAt = Instant.parse("2026-01-15T10:00:00Z");
     given(customer.getPublicId()).willReturn("CUS-1001");
     given(customer.getFullName()).willReturn("Amina Khan");
     given(customer.getStatus()).willReturn("ACTIVE");
-    given(customer.getCreatedAt()).willReturn(createdAt);
     given(customerRepository.findByPublicId("CUS-1001")).willReturn(Optional.of(customer));
 
     var profile = customerService.get("CUS-1001");
 
-    assertThat(profile.customerId()).isEqualTo("CUS-1001");
+    assertThat(profile.publicId()).isEqualTo("CUS-1001");
     assertThat(profile.fullName()).isEqualTo("Amina Khan");
     assertThat(profile.status()).isEqualTo("ACTIVE");
     verify(customerRepository).findByPublicId("CUS-1001");

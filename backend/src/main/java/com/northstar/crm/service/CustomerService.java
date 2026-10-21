@@ -5,6 +5,7 @@ import com.northstar.crm.api.dto.CustomerPageResponse;
 import com.northstar.crm.api.dto.CustomerResponse;
 import com.northstar.crm.domain.CustomerEntity;
 import com.northstar.crm.repo.CustomerRepository;
+import com.northstar.crm.repo.InteractionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,9 +19,12 @@ public class CustomerService {
   private static final int MAX_PAGE_SIZE = 50;
 
   private final CustomerRepository customerRepository;
+  private final InteractionRepository interactionRepository;
 
-  public CustomerService(CustomerRepository customerRepository) {
+  public CustomerService(
+      CustomerRepository customerRepository, InteractionRepository interactionRepository) {
     this.customerRepository = customerRepository;
+    this.interactionRepository = interactionRepository;
   }
 
   public CustomerPageResponse search(String query, int page, int size) {
@@ -48,6 +52,27 @@ public class CustomerService {
     customer.setFullName(request.fullName().trim());
     customer.setStatus(request.status());
     return toResponse(customerRepository.save(customer));
+  }
+
+  @Transactional
+  public CustomerResponse update(String publicId, CreateCustomerRequest request) {
+    CustomerEntity customer =
+        customerRepository
+            .findByPublicId(publicId)
+            .orElseThrow(() -> new UnknownCustomerException(publicId));
+    customer.setFullName(request.fullName().trim());
+    customer.setStatus(request.status());
+    return toResponse(customerRepository.save(customer));
+  }
+
+  @Transactional
+  public void delete(String publicId) {
+    CustomerEntity customer =
+        customerRepository
+            .findByPublicId(publicId)
+            .orElseThrow(() -> new UnknownCustomerException(publicId));
+    interactionRepository.deleteByCustomer_Id(customer.getId());
+    customerRepository.delete(customer);
   }
 
   public CustomerResponse get(String publicId) {

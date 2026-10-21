@@ -21,6 +21,14 @@ export class CustomerApiService {
     return this.http.post<Customer>(this.base, body);
   }
 
+  update(publicId: string, body: CreateCustomerRequest): Observable<Customer> {
+    return this.http.put<Customer>(`${this.base}/${encodeURIComponent(publicId)}`, body);
+  }
+
+  delete(publicId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${encodeURIComponent(publicId)}`);
+  }
+
   get(publicId: string): Observable<Customer> {
     return this.http.get<Customer>(`${this.base}/${encodeURIComponent(publicId)}`);
   }

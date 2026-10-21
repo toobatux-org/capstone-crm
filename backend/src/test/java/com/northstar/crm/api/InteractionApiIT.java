@@ -3,6 +3,7 @@ package com.northstar.crm.api;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,6 +103,53 @@ class InteractionApiIT extends PostgresContainerTest {
         .perform(get("/api/v1/customers/CUS-1003").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.fullName").value("Jordan Hale"));
+  }
+
+  @Test
+  void updateCustomer_changesNameAndStatus() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(
+            put("/api/v1/customers/CUS-1002")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"fullName":"Ravi Singh Updated","status":"ACTIVE"}
+                    """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fullName").value("Ravi Singh Updated"))
+        .andExpect(jsonPath("$.status").value("ACTIVE"));
+  }
+
+  @Test
+  void deleteCustomer_agentForbidden_adminRemovesCustomer() throws Exception {
+    String agent = registerAndLogin("agent");
+    String admin = loginSeededAdmin();
+
+    mockMvc
+        .perform(delete("/api/v1/customers/CUS-1001").header("Authorization", "Bearer " + agent))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            post("/api/v1/customers")
+                .header("Authorization", "Bearer " + admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"fullName":"Delete Me","status":"PROSPECT"}
+                    """))
+        .andExpect(status().isCreated());
+
+    mockMvc
+        .perform(delete("/api/v1/customers/CUS-1003").header("Authorization", "Bearer " + admin))
+        .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(get("/api/v1/customers/CUS-1003").header("Authorization", "Bearer " + admin))
+        .andExpect(status().isNotFound());
   }
 
   @Test

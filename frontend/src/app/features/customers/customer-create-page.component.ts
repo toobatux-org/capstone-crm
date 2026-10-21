@@ -7,19 +7,21 @@ import { CustomerApiService } from './customer-api.service';
   selector: 'app-customer-create-page',
   standalone: true,
   imports: [FormsModule, RouterLink],
+  host: { class: 'mx-auto block w-full max-w-[38rem]' },
   template: `
-    <section class="create-page">
-      <header class="page-heading">
+    <section>
+      <header class="mb-6 flex flex-col items-start gap-2 border-b border-[#d5d9d6] sm:flex-row sm:items-baseline sm:justify-between">
         <h2>New customer</h2>
-        <a routerLink="/customers">Back to customers</a>
+        <a routerLink="/customers" class="font-semibold text-[#176b54] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]">Back to customers</a>
       </header>
 
-      <form #customerForm="ngForm" (ngSubmit)="create(customerForm)" novalidate>
-        <div class="field">
-          <label for="customer-name">Full name <span aria-hidden="true">*</span></label>
+      <form #customerForm="ngForm" (ngSubmit)="create(customerForm)" class="grid gap-4" novalidate>
+        <div class="grid gap-[0.4rem]">
+          <label for="customer-name" class="font-semibold">Full name <span aria-hidden="true">*</span></label>
           <input
             id="customer-name"
             name="fullName"
+            class="box-border w-full rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
             [(ngModel)]="fullName"
             #nameControl="ngModel"
             required
@@ -28,15 +30,16 @@ import { CustomerApiService } from './customer-api.service';
             autocomplete="off"
           />
           @if ((nameControl.touched || customerForm.submitted) && !fullName.trim()) {
-            <p class="field-error">Enter the customer's name.</p>
+            <p class="m-0 text-[0.9rem] text-[#9d2929]">Enter the customer's name.</p>
           }
         </div>
 
-        <div class="field">
-          <label for="customer-status">Status <span aria-hidden="true">*</span></label>
+        <div class="grid gap-[0.4rem]">
+          <label for="customer-status" class="font-semibold">Status <span aria-hidden="true">*</span></label>
           <select
             id="customer-status"
             name="status"
+            class="box-border w-full rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
             [(ngModel)]="status"
             #statusControl="ngModel"
             required
@@ -48,32 +51,24 @@ import { CustomerApiService } from './customer-api.service';
             }
           </select>
           @if ((statusControl.touched || customerForm.submitted) && statusControl.invalid) {
-            <p class="field-error">Select a status.</p>
+            <p class="m-0 text-[0.9rem] text-[#9d2929]">Select a status.</p>
           }
         </div>
 
         @if (error()) {
-          <p class="state-error" role="alert">{{ error() }}</p>
+          <p class="text-[#9d2929]" role="alert">{{ error() }}</p>
         }
 
-        <button type="submit" [disabled]="saving()" data-testid="save-customer">
+        <button
+          type="submit"
+          class="justify-self-start cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-4 py-[0.65rem] font-[inherit] font-semibold text-white focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54] disabled:cursor-wait disabled:opacity-[0.65]"
+          [disabled]="saving()"
+          data-testid="save-customer"
+        >
           {{ saving() ? 'Saving...' : 'Save customer' }}
         </button>
       </form>
     </section>
-  `,
-  styles: `
-    :host { display: block; max-width: 38rem; }
-    .page-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #d5d9d6; margin-bottom: 1.5rem; }
-    a { color: #176b54; font-weight: 600; }
-    form { display: grid; gap: 1rem; }
-    .field { display: grid; gap: 0.4rem; }
-    label { font-weight: 600; }
-    input, select { box-sizing: border-box; width: 100%; border: 1px solid #87938b; border-radius: 3px; padding: 0.65rem; font: inherit; background: #fff; color: #18221b; }
-    input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 2px solid #176b54; outline-offset: 2px; }
-    .field-error, .state-error { color: #9d2929; margin: 0; }
-    button { justify-self: start; border: 0; border-radius: 3px; padding: 0.65rem 1rem; background: #176b54; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-    button:disabled { cursor: wait; opacity: 0.65; }
   `,
 })
 export class CustomerCreatePageComponent {

@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthApiService } from '../../core/auth/auth-api.service';
 import { AuthSessionService } from '../../core/auth/auth-session.service';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login-page',
@@ -75,27 +74,13 @@ import { environment } from '../../../environments/environment';
             <button type="button" class="secondary" data-testid="register" (click)="showRegister()" [disabled]="submitting()">
               Register
             </button>
-            @if (localDemoSignInEnabled) {
-              <button
-                type="button"
-                class="secondary"
-                data-testid="test-sign-in"
-                (click)="startDemo()"
-                [disabled]="submitting()"
-              >
-                Open local demo
-              </button>
-            }
           }
         </div>
       </form>
-      @if (!registering() && localDemoSignInEnabled) {
-        <p class="probe">Uses sample data in this browser. No server connection or account is required.</p>
-      }
     </section>
   `,
   styles: `
-    :host { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 6.5rem); }
+    :host { display: flex; justify-content: center; align-items: center; width: 100%; min-height: calc(100dvh - 8rem); }
     .login-page { width: 100%; max-width: 28rem; background: #fff; border: 1px solid #d5d9d6; border-radius: 6px; padding: 1.5rem; }
     .page-heading { border-bottom: 1px solid #d5d9d6; margin-bottom: 1.5rem; }
     .page-heading p { color: #59645d; }
@@ -108,6 +93,7 @@ import { environment } from '../../../environments/environment';
     input:focus, button:focus-visible { outline: 2px solid #176b54; outline-offset: 2px; }
     .field-error { margin: 0; color: #9d2929; }
     .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    @media (max-width: 40rem) { .actions { flex-direction: column; } .actions button { width: 100%; } }
     button { border: 0; border-radius: 3px; padding: 0.65rem 1rem; background: #176b54; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
     button.secondary { background: #fff; color: #176b54; border: 1px solid #176b54; }
     button:disabled { cursor: wait; opacity: 0.65; }
@@ -124,7 +110,6 @@ export class LoginPageComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly registering = signal(false);
-  readonly localDemoSignInEnabled = environment.localDemoSignInEnabled;
 
   submitLabel(): string {
     if (this.submitting()) {
@@ -149,14 +134,6 @@ export class LoginPageComponent {
       return;
     }
     this.login();
-  }
-
-  startDemo(): void {
-    if (!this.localDemoSignInEnabled || this.submitting() || this.registering()) {
-      return;
-    }
-    this.session.startDemoSession();
-    void this.router.navigate(['/customers']);
   }
 
   private login(): void {
