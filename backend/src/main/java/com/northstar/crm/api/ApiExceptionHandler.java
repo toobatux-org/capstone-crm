@@ -34,22 +34,26 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ProblemDetail> invalidArgument(
-          IllegalArgumentException ex, HttpServletRequest request) {
+          IllegalArgumentException ex) {
+    String correlationId = CorrelationUtils.resolveCorrelationId();
+
     ProblemDetail problem =
             ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     problem.setTitle("Invalid request");
-    problem.setProperty("correlationId", correlationId(request));
+    problem.setProperty("correlationId", correlationId);
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem);
   }
 
   @ExceptionHandler(ResponseStatusException.class)
   public ResponseEntity<ProblemDetail> status(
-          ResponseStatusException ex, HttpServletRequest request) {
+          ResponseStatusException ex) {
+    String correlationId = CorrelationUtils.resolveCorrelationId();
+
     HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
     ProblemDetail problem =
             ProblemDetail.forStatusAndDetail(status, ex.getReason());
     problem.setTitle(status.getReasonPhrase());
-    problem.setProperty("correlationId", correlationId(request));
+    problem.setProperty("correlationId", correlationId);
     return ResponseEntity.status(status).body(problem);
   }
 

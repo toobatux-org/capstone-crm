@@ -62,14 +62,13 @@ public class InteractionService {
 
   @Transactional(readOnly = true)
   public List<InteractionResponse> listAll() {
-    return interactionRepository.findAllByOrderByCreatedAtDesc()
+    List<InteractionResponse> responses = interactionRepository.findAllByOrderByCreatedAtDesc()
             .stream()
             .map(this::toResponse)
             .toList();
 
     log.atInfo()
             .addKeyValue("event", "interaction.list.success")
-            .addKeyValue("customerPublicId", customerId)
             .addKeyValue("interactionCount", responses.size())
             .log("Successfully retrieved interactions for customer");
 
@@ -108,31 +107,6 @@ public class InteractionService {
 
     interactionEventPublisher.publish(saved);                     //publish() now expects an InteractionEntity instead of an Interaction
     log.debug("Successfully published interaction event for interaction ID: {}", saved.getId());
-
-    return new InteractionResponse(
-            saved.getId(),
-            saved.getCustomer().getPublicId(),
-            saved.getInteractionType(),
-            saved.getSummary(),
-            saved.getCorrelationId(),
-            saved.getCreatedAt());
-  }
-
-  @Transactional
-  public InteractionResponse update(UUID id, UpdateInteractionRequest request) {
-
-    var interaction =
-            interactionRepository
-                    .findById(id)
-                    .orElseThrow(
-                            () ->
-                                    new ResponseStatusException(
-                                            HttpStatus.NOT_FOUND, "Interaction not found"));
-
-    interaction.setInteractionType(request.interactionType());
-    interaction.setSummary(request.summary());
-
-    var saved = interactionRepository.save(interaction);
 
     return new InteractionResponse(
             saved.getId(),
