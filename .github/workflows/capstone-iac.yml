@@ -1,6 +1,6 @@
 # Checks Terraform and Ansible on every change to infra/.
 # No cluster credentials needed: these jobs only check the code.
-# A real `terraform plan` against OpenShift is a manual, approval-gated job.
+# A real `terraform plan` against k3s is a manual, approval-gated job.
 name: Capstone IaC
 
 on:
@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       run_plan:
-        description: "Also run terraform plan against OpenShift (needs approval + secrets)"
+        description: "Also run terraform plan against k3s (needs approval + secrets)"
         type: boolean
         default: false
 
@@ -51,11 +51,13 @@ jobs:
     defaults:
       run:
         working-directory: infra/terraform
-    env:
-      KUBE_HOST: ${{ secrets.OPENSHIFT_SERVER }}
-      KUBE_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
       - uses: hashicorp/setup-terraform@v3
       - run: terraform init -backend=false
       - run: terraform plan -no-color -out=tfplan
