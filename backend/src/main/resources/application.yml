@@ -35,3 +35,12 @@ app:
     username: ${CRM_ADMIN_USERNAME:}
     email: ${CRM_ADMIN_EMAIL:}
     password: ${CRM_ADMIN_PASSWORD:}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.northstar.crm: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

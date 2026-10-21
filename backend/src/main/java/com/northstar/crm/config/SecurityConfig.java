@@ -2,6 +2,7 @@ package com.northstar.crm.config;
 
 import com.northstar.crm.api.JwtAuthenticationFilter;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@Slf4j
 @EnableMethodSecurity
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -44,6 +46,14 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .exceptionHandling(e -> e
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            log.atWarn()
+                                    .addKeyValue("event", "security.authentication.required")
+                                    .addKeyValue("method", request.getMethod())
+                                    .addKeyValue("path", request.getRequestURI())
+                                    .log("Unauthenticated request rejected");
+                            response.sendError(HttpStatus.UNAUTHORIZED.value());
+                        })
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                         .accessDeniedHandler(new HttpStatusAccessDeniedHandler(HttpStatus.FORBIDDEN))
                 )

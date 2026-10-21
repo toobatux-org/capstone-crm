@@ -2,19 +2,18 @@ package com.northstar.crm.messaging;
 
 import com.northstar.crm.domain.InteractionEntity;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+@Slf4j
 @Component
 public class InteractionEventPublisher {
 
   public static final String TOPIC = "crm.customer.interactions.v1";
-
-  private static final Logger log = LoggerFactory.getLogger(InteractionEventPublisher.class);
 
   private final KafkaTemplate<String, CustomerInteractionRecordedV1> kafkaTemplate;
 
@@ -26,6 +25,7 @@ public class InteractionEventPublisher {
   public void publish(InteractionEntity saved) {
     CustomerInteractionRecordedV1 event = toEvent(saved);
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      log.debug("Transaction active. Registering after-commit hook to publish eventId [{}]", event.eventId());
       TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
         @Override
         public void afterCommit() {
@@ -34,6 +34,7 @@ public class InteractionEventPublisher {
       });
     } else {
       // No transaction: the save has already committed
+      log.warn("No active transaction found during publish. Sending eventId [{}] immediately.", event.eventId());
       send(event);
     }
   }
@@ -45,6 +46,9 @@ public class InteractionEventPublisher {
               if (ex != null) {
                 log.error("Publish failed for interaction {} (eventId {})",
                         event.interactionId(), event.eventId(), ex);
+              } else {
+                log.info("Successfully published interaction event [type={}, id={}, customer={}] to topic [{}]",
+                        event.eventType(), event.interactionId(), event.customerId(), TOPIC);
               }
             });
   }

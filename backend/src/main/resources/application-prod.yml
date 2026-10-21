@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+# Production Logging: Structured JSON for container clusters
+logging:
+  structured:
+    format:
+      console: "ecs" # Emits Elastic Common Schema JSON logs
+  level:
+    root: INFO
+    com.northstar.crm: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: ERROR # Silence raw SQL strings in prod for security/cleanliness

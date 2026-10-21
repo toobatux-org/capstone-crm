@@ -15,12 +15,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -68,6 +70,12 @@ public class AuthServiceTest {
     }
 
     @Test
+    void shouldRethrowFailedAuthentication() {
+        given(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                .willThrow(new BadCredentialsException("Bad credentials"));
+
+        assertThatThrownBy(() -> authService.authenticate(loginRequest))
+                .isInstanceOf(BadCredentialsException.class);
     void register_existingUsername_rejectsRegistration() {
         RegisterRequestDto request =
                 new RegisterRequestDto("existing", "new@example.com", "password", "AGENT");

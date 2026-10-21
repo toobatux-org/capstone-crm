@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+logging:
+  pattern:
+    console: "%-5level %logger{15} - %msg%n" # Compact format
+  level:
+    root: WARN
+    com.northstar.crm: INFO
+    org.springframework.test: INFO
+    org.hibernate.SQL: WARN
