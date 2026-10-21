@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend
+  name: crm-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend
+      app: crm-api
   template:
     metadata:
       labels:
-        app: backend
+        app: crm-api
     spec:
       containers:
-        - name: backend
-          image: ghcr.io/toobatux/backend:latest
+        - name: crm-api
+          image: ghcr.io/toobatux-org/capstone-crm/crm-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -35,6 +35,9 @@ spec:
             periodSeconds: 15
           # ---------------------
 
+          envFrom:
+            - secretRef:
+                name: crm-backend-secrets
           env:
             - name: SPRING_DATASOURCE_URL
               value: jdbc:postgresql://postgres-service:5432/mydb
@@ -51,10 +54,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend-service
+  name: crm-api-service
 spec:
   selector:
-    app: backend
+    app: crm-api
   ports:
     - port: 8080
       targetPort: 8080

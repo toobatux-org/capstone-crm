@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.northstar.crm.PostgresContainerTest;
 import com.jayway.jsonpath.JsonPath;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -22,16 +23,15 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class InteractionApiIT {
+class InteractionApiIT extends PostgresContainerTest {
 
   private static final String JWT_SECRET = "bm9ydGhzdGFyLWNybS1sYWItand0LXNlY3JldC1rZXkhIQ==";
 
   @DynamicPropertySource
-  static void postgres(DynamicPropertyRegistry registry) {
-    registry.add("spring.datasource.url", () -> "jdbc:postgresql://localhost:5432/crm");
-    registry.add("spring.datasource.username", () -> "crm");
-    registry.add("spring.datasource.password", () -> "change-me");
+  static void testProperties(DynamicPropertyRegistry registry) {
     registry.add("spring.security.jwt.secret", () -> JWT_SECRET);
+    registry.add("app.admin.username", () -> "it-admin");
+    registry.add("app.admin.password", () -> "test-pass-1");
   }
 
   @Autowired MockMvc mockMvc;
@@ -103,7 +103,7 @@ class InteractionApiIT {
   @Test
   void authFlow_agentAndAdmin() throws Exception {
     String agent = registerAndLogin("agent");
-    String admin = registerAndLogin("admin");
+    String admin = loginSeededAdmin();
 
     MvcResult created =
         mockMvc
@@ -171,6 +171,22 @@ class InteractionApiIT {
                         {"username":"%s","password":"test-pass-1"}
                         """
                             .formatted(name)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").isNotEmpty())
+            .andReturn();
+    return JsonPath.read(login.getResponse().getContentAsString(), "$.token");
+  }
+
+  private String loginSeededAdmin() throws Exception {
+    MvcResult login =
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"username":"it-admin","password":"test-pass-1"}
+                        """))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.token").isNotEmpty())
             .andReturn();

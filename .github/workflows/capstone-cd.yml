@@ -35,36 +35,69 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
           chmod 600 "$HOME/.kube/config"
 
-      - name: Deploy to cluster
+      - name: Apply cluster secrets
+        env:
+          SPRING_SECURITY_JWT_SECRET: ${{ secrets.SPRING_SECURITY_JWT_SECRET }}
+          CRM_ADMIN_USERNAME: ${{ secrets.CRM_ADMIN_USERNAME }}
+          CRM_ADMIN_PASSWORD: ${{ secrets.CRM_ADMIN_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           set -euo pipefail
+          kubectl create secret generic crm-backend-secrets \
+            --from-literal=SPRING_SECURITY_JWT_SECRET="$SPRING_SECURITY_JWT_SECRET" \
+            --from-literal=CRM_ADMIN_USERNAME="$CRM_ADMIN_USERNAME" \
+            --from-literal=CRM_ADMIN_PASSWORD="$CRM_ADMIN_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic postgres-secret \
+            --from-literal=POSTGRES_USER=myuser \
+            --from-literal=POSTGRES_DB=mydb \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to cluster
+        env:
+          API_DIGEST: ${{ inputs.api_digest }}
+          UI_DIGEST: ${{ inputs.ui_digest }}
+        run: |
+          set -euo pipefail
+          # Accept "sha256:...", "crm-api@sha256:...", or the full image reference.
+          API_DIGEST="${API_DIGEST##*@}"
+          UI_DIGEST="${UI_DIGEST##*@}"
+          case "$API_DIGEST" in sha256:*) ;; *) echo "api_digest must start with sha256:"; exit 1 ;; esac
+          case "$UI_DIGEST" in sha256:*) ;; *) echo "ui_digest must start with sha256:"; exit 1 ;; esac
+          echo "API_DIGEST=$API_DIGEST" >> "$GITHUB_ENV"
+          echo "UI_DIGEST=$UI_DIGEST" >> "$GITHUB_ENV"
           kubectl apply -f deploy/k3s/
-          kubectl set image deployment/backend \
-            backend="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
-          kubectl set image deployment/frontend \
-            frontend="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
-          kubectl rollout status deployment/backend --timeout=180s
-          kubectl rollout status deployment/frontend --timeout=180s
+          kubectl set image deployment/crm-api \
+            crm-api="$REGISTRY_PATH/crm-api@$API_DIGEST"
+          kubectl set image deployment/crm-ui \
+            crm-ui="$REGISTRY_PATH/crm-ui@$UI_DIGEST"
+          kubectl rollout status deployment/crm-api --timeout=180s
+          kubectl rollout status deployment/crm-ui --timeout=180s
 
       - name: Smoke test CUS-1001
         env:
-          SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
-          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_USERNAME: ${{ secrets.CRM_ADMIN_USERNAME }}
+          SMOKE_PASSWORD: ${{ secrets.CRM_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
           kubectl delete pod smoke-crm --ignore-not-found
           kubectl run smoke-crm --restart=Never --image=curlimages/curl:8.11.1 --command -- sleep 90
           kubectl wait --for=condition=Ready pod/smoke-crm --timeout=90s
-          FRONT_IP=$(kubectl get pod -l app=frontend -o jsonpath='{.items[0].status.podIP}')
+          FRONT_IP=$(kubectl get pod -l app=crm-ui -o jsonpath='{.items[0].status.podIP}')
           kubectl exec smoke-crm -- curl -fsS -o /dev/null -w "UI %{http_code}\n" "http://$FRONT_IP:8080/"
-          TOKEN=$(kubectl exec smoke-crm -- curl -fsS -X POST "http://backend-service:8080/api/v1/auth/login" \
+          # jq encodes the password. A double-quoted -d string changes $, quotes, and backslashes.
+          jq -n --arg username "$SMOKE_USERNAME" --arg password "$SMOKE_PASSWORD" \
+            '{username:$username, password:$password}' > "$RUNNER_TEMP/login.json"
+          TOKEN=$(kubectl exec -i smoke-crm -- curl -fsS -X POST "http://crm-api-service:8080/api/v1/auth/login" \
             -H "Content-Type: application/json" \
-            -d "{\"username\":\"$SMOKE_USERNAME\",\"password\":\"$SMOKE_PASSWORD\"}" | jq -r .token)
+            --data-binary @- < "$RUNNER_TEMP/login.json" | jq -r .token)
+          rm -f "$RUNNER_TEMP/login.json"
           echo "::add-mask::$TOKEN"
           kubectl exec smoke-crm -- curl -fsS -w "\nAPI %{http_code}\n" \
             -H "Authorization: Bearer $TOKEN" \
             -H "X-Correlation-ID: lab-request-001" \
-            "http://backend-service:8080/api/v1/interactions?customerId=CUS-1001"
+            "http://crm-api-service:8080/api/v1/interactions?customerId=CUS-1001"
           kubectl delete pod smoke-crm --ignore-not-found
 
       - name: Record what was deployed
@@ -73,7 +106,7 @@ jobs:
           NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
           {
             echo "### Deployed to k3s namespace \`${NS:-default}\`"
-            echo "- crm-api: \`$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}\`"
-            echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}\`"
-            echo "- Rollback: \`kubectl rollout undo deployment/backend\`"
+            echo "- crm-api: \`$REGISTRY_PATH/crm-api@$API_DIGEST\`"
+            echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@$UI_DIGEST\`"
+            echo "- Rollback: \`kubectl rollout undo deployment/crm-api\`"
           } >> "$GITHUB_STEP_SUMMARY"

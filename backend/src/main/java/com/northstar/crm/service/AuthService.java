@@ -13,7 +13,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Locale;
 
 @Service
 public class AuthService {
@@ -48,7 +47,7 @@ public class AuthService {
         user.setUsername(request.username());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRoles(List.of(requestedRole(request.role())));
+        user.setRoles(List.of(UserRole.AGENT));
         userRepository.save(user);
 
         // Generate a JWT token for the newly registered user
@@ -71,13 +70,5 @@ public class AuthService {
 
         var jwtToken = jwtService.generateToken(user);
         return new AuthResponseDto(jwtToken);
-    }
-
-    private UserRole requestedRole(String role) {
-        try {
-            return UserRole.valueOf(role.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException | NullPointerException ex) {
-            throw new IllegalArgumentException("Role must be AGENT or ADMIN");
-        }
     }
 }
