@@ -3,6 +3,7 @@ package com.northstar.crm.api;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,6 +36,148 @@ class InteractionApiIT extends PostgresContainerTest {
   }
 
   @Autowired MockMvc mockMvc;
+
+  @Test
+  void search_byNameOrPublicId_findsAmina() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(
+            get("/api/v1/customers")
+                .param("q", "Amina")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].publicId").value("CUS-1001"))
+        .andExpect(jsonPath("$.content[0].fullName").value("Amina Khan"))
+        .andExpect(jsonPath("$.content[0].status").value("ACTIVE"));
+
+    mockMvc
+        .perform(
+            get("/api/v1/customers")
+                .param("q", "CUS-1001")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].fullName").value("Amina Khan"));
+  }
+
+  @Test
+  void list_customers_isPaged() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(get("/api/v1/customers").param("size", "1").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].fullName").value("Amina Khan"))
+        .andExpect(jsonPath("$.totalElements").value(2))
+        .andExpect(jsonPath("$.totalPages").value(2));
+
+    mockMvc
+        .perform(
+            get("/api/v1/customers")
+                .param("size", "1")
+                .param("page", "1")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content[0].publicId").value("CUS-1002"));
+  }
+
+  @Test
+  void createCustomer_persistsAndCanBeFetched() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(
+            post("/api/v1/customers")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"fullName":"Jordan Hale","status":"PROSPECT"}
+                    """))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.publicId").value("CUS-1003"))
+        .andExpect(jsonPath("$.fullName").value("Jordan Hale"))
+        .andExpect(jsonPath("$.status").value("PROSPECT"));
+
+    mockMvc
+        .perform(get("/api/v1/customers/CUS-1003").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fullName").value("Jordan Hale"));
+  }
+
+  @Test
+  void updateCustomer_changesNameAndStatus() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(
+            put("/api/v1/customers/CUS-1002")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"fullName":"Ravi Singh Updated","status":"ACTIVE"}
+                    """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fullName").value("Ravi Singh Updated"))
+        .andExpect(jsonPath("$.status").value("ACTIVE"));
+  }
+
+  @Test
+  void deleteCustomer_agentForbidden_adminRemovesCustomer() throws Exception {
+    String agent = registerAndLogin("agent");
+    String admin = loginSeededAdmin();
+
+    mockMvc
+        .perform(delete("/api/v1/customers/CUS-1001").header("Authorization", "Bearer " + agent))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            post("/api/v1/customers")
+                .header("Authorization", "Bearer " + admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"fullName":"Delete Me","status":"PROSPECT"}
+                    """))
+        .andExpect(status().isCreated());
+
+    mockMvc
+        .perform(delete("/api/v1/customers/CUS-1003").header("Authorization", "Bearer " + admin))
+        .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(get("/api/v1/customers/CUS-1003").header("Authorization", "Bearer " + admin))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void createCustomer_invalidBody_badRequest() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(
+            post("/api/v1/customers")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"fullName":" ","status":"UNKNOWN"}
+                    """))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void get_unknownCustomer_notFound() throws Exception {
+    String token = registerAndLogin("agent");
+
+    mockMvc
+        .perform(
+            get("/api/v1/customers/CUS-9999").header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Customer not found"));
+  }
 
   @Test
   void list_withoutBearer_unauthorized() throws Exception {

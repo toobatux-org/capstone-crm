@@ -9,4 +9,6 @@ public interface InteractionRepository extends JpaRepository<InteractionEntity, 
   List<InteractionEntity> findByCustomer_PublicIdOrderByCreatedAtDesc(String publicId);
 
   List<InteractionEntity> findAllByOrderByCreatedAtDesc();
+
+  void deleteByCustomer_Id(Long customerId);
 }

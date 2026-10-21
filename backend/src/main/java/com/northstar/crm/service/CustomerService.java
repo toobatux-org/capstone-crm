@@ -1,48 +1,88 @@
 package com.northstar.crm.service;
 
+import com.northstar.crm.api.dto.CreateCustomerRequest;
+import com.northstar.crm.api.dto.CustomerPageResponse;
 import com.northstar.crm.api.dto.CustomerResponse;
 import com.northstar.crm.domain.CustomerEntity;
 import com.northstar.crm.repo.CustomerRepository;
-import java.util.List;
+import com.northstar.crm.repo.InteractionRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CustomerService {
 
+  private static final int MAX_PAGE_SIZE = 50;
+
   private final CustomerRepository customerRepository;
+  private final InteractionRepository interactionRepository;
 
-  public CustomerService(CustomerRepository customerRepository) {
+  public CustomerService(
+      CustomerRepository customerRepository, InteractionRepository interactionRepository) {
     this.customerRepository = customerRepository;
+    this.interactionRepository = interactionRepository;
   }
 
-  @Transactional(readOnly = true)
-  public List<CustomerResponse> search(String query) {
-    String normalizedQuery = query == null ? "" : query.trim();
-    if (normalizedQuery.isEmpty()) {
-      return customerRepository.findTop50ByOrderByFullNameAsc().stream()
-          .map(this::toResponse)
-          .toList();
-    }
-
-    return customerRepository
-        .findTop50ByPublicIdContainingIgnoreCaseOrFullNameContainingIgnoreCaseOrderByFullNameAsc(
-            normalizedQuery, normalizedQuery)
-        .stream()
-        .map(this::toResponse)
-        .toList();
+  public CustomerPageResponse search(String query, int page, int size) {
+    int safePage = Math.max(page, 0);
+    int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+    Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("fullName").ascending());
+    Page<CustomerEntity> result =
+        query == null || query.isBlank()
+            ? customerRepository.findAll(pageable)
+            : customerRepository.findByPublicIdContainingIgnoreCaseOrFullNameContainingIgnoreCase(
+                query.trim(), query.trim(), pageable);
+    return new CustomerPageResponse(
+        result.getContent().stream().map(this::toResponse).toList(),
+        result.getNumber(),
+        result.getSize(),
+        result.getTotalElements(),
+        result.getTotalPages());
   }
 
-  @Transactional(readOnly = true)
-  public CustomerResponse get(String customerId) {
+  @Transactional
+  public synchronized CustomerResponse create(CreateCustomerRequest request) {
+    int nextNumber = customerRepository.findMaxCustomerNumber() + 1;
+    CustomerEntity customer = new CustomerEntity();
+    customer.setPublicId("CUS-" + nextNumber);
+    customer.setFullName(request.fullName().trim());
+    customer.setStatus(request.status());
+    return toResponse(customerRepository.save(customer));
+  }
+
+  @Transactional
+  public CustomerResponse update(String publicId, CreateCustomerRequest request) {
+    CustomerEntity customer =
+        customerRepository
+            .findByPublicId(publicId)
+            .orElseThrow(() -> new UnknownCustomerException(publicId));
+    customer.setFullName(request.fullName().trim());
+    customer.setStatus(request.status());
+    return toResponse(customerRepository.save(customer));
+  }
+
+  @Transactional
+  public void delete(String publicId) {
+    CustomerEntity customer =
+        customerRepository
+            .findByPublicId(publicId)
+            .orElseThrow(() -> new UnknownCustomerException(publicId));
+    interactionRepository.deleteByCustomer_Id(customer.getId());
+    customerRepository.delete(customer);
+  }
+
+  public CustomerResponse get(String publicId) {
     return customerRepository
-        .findByPublicId(customerId)
+        .findByPublicId(publicId)
         .map(this::toResponse)
-        .orElseThrow(() -> new UnknownCustomerException(customerId));
+        .orElseThrow(() -> new UnknownCustomerException(publicId));
   }
 
   private CustomerResponse toResponse(CustomerEntity customer) {
-    return new CustomerResponse(
-        customer.getPublicId(), customer.getFullName(), customer.getStatus(), customer.getCreatedAt());
+    return new CustomerResponse(customer.getPublicId(), customer.getFullName(), customer.getStatus());
   }
 }

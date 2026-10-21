@@ -3,7 +3,6 @@ package com.northstar.crm.domain;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.util.List;
 
 @Entity
 @Table(name = "customer")
@@ -32,7 +31,7 @@ public class CustomerEntity {
   public String getStatus() { return status; }
   public Instant getCreatedAt() { return createdAt; }
 
-//  public void setPublicId(String publicId) { this.publicId = publicId; }
-//  public void setFullName(String fullName) { this.fullName = fullName; }
-//  public void setStatus(String status) { this.status = status; }
+  public void setPublicId(String publicId) { this.publicId = publicId; }
+  public void setFullName(String fullName) { this.fullName = fullName; }
+  public void setStatus(String status) { this.status = status; }
 }

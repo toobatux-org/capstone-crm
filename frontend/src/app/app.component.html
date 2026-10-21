@@ -1,28 +1,24 @@
 <header>
+  <div class="header-bar">
   <div class="brand">
     <img src="/images/nslogo.png" alt="" />
     <h1><strong>Northstar CRM</strong></h1>
   </div>
   @if (session.isSignedIn()) {
-    <nav class="flex items-center gap-4">
-      @if (session.demoMode()) {
-        <span class="text-sm text-[#59645d]">Local demo</span>
-      }
+    <nav>
       <a
         routerLink="/customers"
         routerLinkActive="active-nav-link"
         [routerLinkActiveOptions]="exactMatch"
         ariaCurrentWhenActive="page"
       >Customers</a>
-      <a
-        routerLink="/interactions"
-        routerLinkActive="active-nav-link"
-        [routerLinkActiveOptions]="exactMatch"
-        ariaCurrentWhenActive="page"
-      >Interactions</a>
-      <button class="logout-button" type="button" (click)="openLogoutConfirmation(logoutDialog)">Log out</button>
+      <div class="account">
+        <span class="signed-in" data-testid="current-agent">{{ session.username() }} · {{ session.isAdmin() ? 'Admin' : 'Agent' }}</span>
+        <button class="logout-button" type="button" (click)="openLogoutConfirmation(logoutDialog)">Log out</button>
+      </div>
     </nav>
   }
+  </div>
 </header>
 <main>
   <router-outlet />
