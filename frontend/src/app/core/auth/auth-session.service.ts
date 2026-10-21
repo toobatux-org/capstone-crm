@@ -1,14 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
-/** Demo-only. Matches Boot `DemoBearerFilter`. Not a production secret. */
-export const LAB_DEMO_TOKEN = 'lab-demo-token';
-
+/** In-memory access token. Not written to localStorage. */
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
   readonly accessToken = signal<string | null>(null);
 
-  loginMock(): void {
-    this.accessToken.set(LAB_DEMO_TOKEN);
+  setAccessToken(token: string): void {
+    this.accessToken.set(token);
   }
 
   logout(): void {

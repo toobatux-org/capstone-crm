@@ -1,7 +1,7 @@
 # Terraform / Ansible plan
 
 ## Terraform: provisions the platform
-- Scope: OpenShift Projects (crm-dev, crm-test, crm-stage, crm-prod), resource quotas, and service accounts for deploys.
+- Scope: one k3s namespace (`default`, unless Tom adds more), resource quotas, and service accounts for deploys.
 - Workflow: terraform plan runs in the pipeline and is reviewed; apply runs only after approval.
 - State: remote backend with locking. State files are never committed to Git (*.tfstate is in .gitignore).
 - Forbidden: secrets in .tf files, publicly exposed databases, committed state.

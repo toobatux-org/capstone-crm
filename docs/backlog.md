@@ -53,13 +53,13 @@ Fixtures (synthetic only): CUS-1001 Amina Khan (ACTIVE), CUS-1002 Ravi Singh (PR
 1. PRs run the Angular job (npm ci, ng test, ng build), the Maven job (mvn verify) and a SAST scan.
 2. A red job blocks the merge.
 
-## CAP-17 — Deploy to OpenShift and smoke test
+## CAP-17 — Deploy to k3s and smoke test
 **Priority:** High · **Lab:** 51 · **Owners:** Aiden (deploy), Tom (manifests + smoke)
 **As** the team **I want** the tested image deployed by digest and checked automatically **so that** we know the release works and can roll it back.
 **Acceptance**
-1. CD deploys the recorded image digest to OpenShift after approval; it does not rebuild.
-2. Smoke test through the Route: readiness passes, and a CUS-1001 call with lab-request-001 succeeds.
-3. Rollback to the previous digest (`oc rollout undo`) has been rehearsed once.
+1. CD deploys the recorded image digest to k3s after approval; it does not rebuild.
+2. Smoke test through the Ingress: readiness passes, and a CUS-1001 call with lab-request-001 succeeds.
+3. Rollback to the previous digest (`kubectl rollout undo`) has been rehearsed once.
 
 ---
 
