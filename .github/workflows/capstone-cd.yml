@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }} # stage/prod wait for reviewer approval
     env:
-      REGISTRY_PATH: ghcr.io/toobatux/capstone-crm
+      REGISTRY_PATH: ghcr.io/toobatux-org/capstone-crm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
