@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
+import { AuthSessionService } from '../../core/auth/auth-session.service';
 import { InteractionApiService } from './interaction-api.service';
 import { Interaction } from './interaction.model';
 
@@ -90,6 +91,10 @@ import { Interaction } from './interaction.model';
           }
         </div>
 
+        @if (deleteError()) {
+          <p class="max-w-[38rem] text-[#9d2929]" role="alert">{{ deleteError() }}</p>
+        }
+
         @if (listError()) {
           <div class="max-w-[38rem] text-[#9d2929]" role="alert">
             <p>{{ listError() }}</p>
@@ -106,10 +111,22 @@ import { Interaction } from './interaction.model';
         } @else {
           <ul class="m-0 list-none p-0">
             @for (row of rows(); track row.id) {
-              <li class="grid grid-cols-[7rem_1fr_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
+              <li class="grid grid-cols-[7rem_1fr_auto_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
                 <strong>{{ row.interactionType }}</strong>
                 <span>{{ row.summary }}</span>
                 <small class="text-[#59645d]">{{ row.createdAt | date: 'medium' }}</small>
+                @if (session.isAdmin()) {
+                  <button
+                    type="button"
+                    class="cursor-pointer rounded-[3px] border border-[#9d2929] bg-white px-3 py-1 font-[inherit] font-semibold text-[#9d2929] focus:outline-2 focus:outline-offset-2 focus:outline-[#9d2929] disabled:cursor-wait disabled:opacity-[0.65]"
+                    [disabled]="deletingId() !== null"
+                    [attr.aria-label]="'Delete ' + row.interactionType + ' interaction'"
+                    (click)="delete(row)"
+                    data-testid="delete-interaction"
+                  >
+                    {{ deletingId() === row.id ? 'Deleting...' : 'Delete' }}
+                  </button>
+                }
               </li>
             }
           </ul>
@@ -120,6 +137,7 @@ import { Interaction } from './interaction.model';
 })
 export class InteractionListPageComponent {
   private readonly api = inject(InteractionApiService);
+  readonly session = inject(AuthSessionService);
 
   readonly customerId = 'CUS-1001';
   readonly interactionTypes = ['CALL', 'EMAIL', 'NOTE', 'MEETING'];
@@ -128,8 +146,10 @@ export class InteractionListPageComponent {
   readonly rows = signal<Interaction[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly deletingId = signal<string | null>(null);
   readonly listError = signal<string | null>(null);
   readonly createError = signal<string | null>(null);
+  readonly deleteError = signal<string | null>(null);
 
   constructor() {
     this.reload();
@@ -174,6 +194,25 @@ export class InteractionListPageComponent {
       error: (err) => {
         this.loading.set(false);
         this.listError.set(this.message('load interactions', err));
+      },
+    });
+  }
+
+  delete(row: Interaction): void {
+    if (this.deletingId() !== null || !window.confirm('Delete this interaction? This cannot be undone.')) {
+      return;
+    }
+
+    this.deleteError.set(null);
+    this.deletingId.set(row.id);
+    this.api.delete(row.id).subscribe({
+      next: () => {
+        this.rows.update((rows) => rows.filter((item) => item.id !== row.id));
+        this.deletingId.set(null);
+      },
+      error: (err) => {
+        this.deletingId.set(null);
+        this.deleteError.set(this.message('delete interaction', err));
       },
     });
   }

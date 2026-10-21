@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { CreateInteractionRequest, Interaction } from './interaction.model';
 
@@ -18,5 +18,9 @@ export class InteractionApiService {
   // Posts body
   create(body: CreateInteractionRequest): Observable<Interaction> {
     return this.http.post<Interaction>(this.base, body);
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${encodeURIComponent(id)}`);
   }
 }
