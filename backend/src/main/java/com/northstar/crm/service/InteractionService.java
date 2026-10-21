@@ -7,8 +7,10 @@ import com.northstar.crm.domain.InteractionEntity;
 import com.northstar.crm.messaging.InteractionEventPublisher;
 import com.northstar.crm.repo.CustomerRepository;
 import com.northstar.crm.repo.InteractionRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -87,5 +89,13 @@ public class InteractionService {
             saved.getSummary(),
             saved.getCorrelationId(),
             saved.getCreatedAt());
+  }
+
+  @Transactional
+  public void delete(UUID id) {
+    if (!interactionRepository.existsById(id)) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Interaction not found");
+    }
+    interactionRepository.deleteById(id);
   }
 }
