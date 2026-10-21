@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+  name: crm-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: crm-ui
   template:
     metadata:
       labels:
-        app: frontend
+        app: crm-ui
     spec:
       containers:
-        - name: frontend
-          image: ghcr.io/toobatux/frontend:latest
+        - name: crm-ui
+          image: ghcr.io/toobatux-org/capstone-crm/crm-ui:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -22,10 +22,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-service
+  name: crm-ui-service
 spec:
   selector:
-    app: frontend
+    app: crm-ui
   ports:
     - port: 80
       targetPort: 80

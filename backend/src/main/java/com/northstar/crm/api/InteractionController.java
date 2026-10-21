@@ -1,6 +1,7 @@
 package com.northstar.crm.api;
 
 import com.northstar.crm.api.dto.CreateInteractionRequest;
+import com.northstar.crm.api.dto.UpdateInteractionRequest;
 import com.northstar.crm.api.dto.InteractionResponse;
 import com.northstar.crm.service.InteractionService;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +48,15 @@ public class InteractionController {
       @RequestHeader(value = "X-Correlation-ID", required = false) String correlationHeader) {
     InteractionResponse body = interactionService.create(request, correlationHeader);
     return ResponseEntity.status(HttpStatus.CREATED).body(body);
+  }
+
+  @PutMapping("/{id}")
+  @PreAuthorize("hasAnyAuthority('AGENT','ADMIN')")
+  public InteractionResponse update(
+          @PathVariable UUID id,
+          @Valid @RequestBody UpdateInteractionRequest request) {
+
+    return interactionService.update(id, request);
   }
 
   @DeleteMapping("/{id}")

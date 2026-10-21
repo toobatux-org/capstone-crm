@@ -1,6 +1,7 @@
 package com.northstar.crm.service;
 
 import com.northstar.crm.api.dto.CreateInteractionRequest;
+import com.northstar.crm.api.dto.UpdateInteractionRequest;
 import com.northstar.crm.api.dto.InteractionResponse;
 //import com.northstar.crm.domain.Interaction;
 import com.northstar.crm.domain.InteractionEntity;
@@ -81,6 +82,31 @@ public class InteractionService {
     var saved = interactionRepository.save(interaction);
 
     interactionEventPublisher.publish(saved);                     //publish() now expects an InteractionEntity instead of an Interaction
+
+    return new InteractionResponse(
+            saved.getId(),
+            saved.getCustomer().getPublicId(),
+            saved.getInteractionType(),
+            saved.getSummary(),
+            saved.getCorrelationId(),
+            saved.getCreatedAt());
+  }
+
+  @Transactional
+  public InteractionResponse update(UUID id, UpdateInteractionRequest request) {
+
+    var interaction =
+            interactionRepository
+                    .findById(id)
+                    .orElseThrow(
+                            () ->
+                                    new ResponseStatusException(
+                                            HttpStatus.NOT_FOUND, "Interaction not found"));
+
+    interaction.setInteractionType(request.interactionType());
+    interaction.setSummary(request.summary());
+
+    var saved = interactionRepository.save(interaction);
 
     return new InteractionResponse(
             saved.getId(),

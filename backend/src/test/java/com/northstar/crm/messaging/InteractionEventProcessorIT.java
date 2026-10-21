@@ -2,6 +2,7 @@ package com.northstar.crm.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.northstar.crm.PostgresContainerTest;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -10,10 +11,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-/** NFR-5: the same eventId processed twice has only one effect. Needs local Postgres. */
+/** NFR-5: the same eventId processed twice has only one effect. */
 @SpringBootTest
 @Transactional
-class InteractionEventProcessorIT {
+class InteractionEventProcessorIT extends PostgresContainerTest {
 
     @Autowired InteractionEventProcessor processor;
     @Autowired JdbcTemplate jdbc;
