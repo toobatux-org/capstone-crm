@@ -76,6 +76,10 @@ public class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.authenticate(loginRequest))
                 .isInstanceOf(BadCredentialsException.class);
+
+    }
+
+    @Test
     void register_existingUsername_rejectsRegistration() {
         RegisterRequestDto request =
                 new RegisterRequestDto("existing", "new@example.com", "password", "AGENT");
