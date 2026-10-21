@@ -57,6 +57,10 @@ jobs:
           format: table
           output: trivy-${{ matrix.name }}.txt
 
+      - name: Show scan report
+        if: always()
+        run: cat trivy-${{ matrix.name }}.txt || true
+
       - name: Record digest
         if: always()
         run: |
