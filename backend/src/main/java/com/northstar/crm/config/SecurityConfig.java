@@ -29,6 +29,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@Slf4j
 @EnableMethodSecurity
 @Slf4j
 public class SecurityConfig {

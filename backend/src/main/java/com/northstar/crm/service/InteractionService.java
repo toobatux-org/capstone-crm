@@ -9,6 +9,7 @@ import com.northstar.crm.domain.InteractionEntity;
 import com.northstar.crm.messaging.InteractionEventPublisher;
 import com.northstar.crm.repo.CustomerRepository;
 import com.northstar.crm.repo.InteractionRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
