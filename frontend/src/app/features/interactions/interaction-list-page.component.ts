@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
+import { AuthSessionService } from '../../core/auth/auth-session.service';
 import { InteractionApiService } from './interaction-api.service';
 import { Interaction } from './interaction.model';
 
@@ -82,6 +83,10 @@ import { Interaction } from './interaction.model';
           }
         </div>
 
+        @if (deleteError()) {
+          <p class="state-error" role="alert">{{ deleteError() }}</p>
+        }
+
         @if (listError()) {
           <div class="state-error" role="alert">
             <p>{{ listError() }}</p>
@@ -98,6 +103,15 @@ import { Interaction } from './interaction.model';
                 <strong>{{ row.interactionType }}</strong>
                 <span>{{ row.summary }}</span>
                 <small>{{ row.createdAt | date: 'medium' }}</small>
+                <button
+                  type="button"
+                  class="danger"
+                  (click)="remove(row)"
+                  [disabled]="deletingId() === row.id"
+                  data-testid="delete"
+                >
+                  {{ deletingId() === row.id ? 'Deleting...' : 'Delete' }}
+                </button>
               </li>
             }
           </ul>
@@ -120,6 +134,7 @@ import { Interaction } from './interaction.model';
     .field-error, .state-error { color: #9d2929; }
     .field-error { margin: 0; font-size: 0.9rem; }
     button { justify-self: start; border: 0; border-radius: 3px; padding: 0.65rem 1rem; background: #176b54; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    button.danger { justify-self: end; padding: 0.4rem 0.75rem; background: #fff; color: #9d2929; border: 1px solid #9d2929; }
     button:disabled { cursor: wait; opacity: 0.65; }
     .timeline { margin-top: 2rem; border-top: 1px solid #d5d9d6; padding-top: 1rem; }
     .timeline h3 { margin: 0; }
@@ -127,12 +142,13 @@ import { Interaction } from './interaction.model';
     .state-error { max-width: 38rem; }
     .state-error p { margin: 0 0 0.75rem; }
     ul { list-style: none; margin: 0; padding: 0; }
-    li { display: grid; grid-template-columns: 7rem 1fr auto; gap: 1rem; align-items: baseline; border-bottom: 1px solid #e1e5e2; padding: 0.85rem 0; }
-    @media (max-width: 36rem) { li { grid-template-columns: 1fr; gap: 0.25rem; } }
+    li { display: grid; grid-template-columns: 7rem 1fr auto auto; gap: 1rem; align-items: center; border-bottom: 1px solid #e1e5e2; padding: 0.85rem 0; }
+    @media (max-width: 36rem) { li { grid-template-columns: 1fr; gap: 0.25rem; } button.danger { justify-self: start; } }
   `,
 })
 export class InteractionListPageComponent {
   private readonly api = inject(InteractionApiService);
+  private readonly session = inject(AuthSessionService);
 
   readonly customerId = 'CUS-1001';
   readonly interactionTypes = ['CALL', 'EMAIL', 'NOTE', 'MEETING'];
@@ -143,6 +159,8 @@ export class InteractionListPageComponent {
   readonly saving = signal(false);
   readonly listError = signal<string | null>(null);
   readonly createError = signal<string | null>(null);
+  readonly deleteError = signal<string | null>(null);
+  readonly deletingId = signal<string | null>(null);
 
   constructor() {
     this.reload();
@@ -174,6 +192,32 @@ export class InteractionListPageComponent {
           this.createError.set(this.message('record interaction', err));
         },
       });
+  }
+
+  remove(row: Interaction): void {
+    if (this.deletingId()) {
+      return;
+    }
+    this.deleteError.set(null);
+    if (!this.session.isAdmin()) {
+      this.deleteError.set('Only admins can delete interactions.');
+      return;
+    }
+    this.deletingId.set(row.id);
+    this.api.delete(row.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.rows.update((rows) => rows.filter((item) => item.id !== row.id));
+      },
+      error: (err) => {
+        this.deletingId.set(null);
+        if (err.status === 403) {
+          this.deleteError.set('Only admins can delete interactions.');
+          return;
+        }
+        this.deleteError.set(this.message('delete interaction', err));
+      },
+    });
   }
 
   reload(): void {

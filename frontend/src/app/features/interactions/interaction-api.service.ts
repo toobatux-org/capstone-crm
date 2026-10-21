@@ -19,4 +19,8 @@ export class InteractionApiService {
   create(body: CreateInteractionRequest): Observable<Interaction> {
     return this.http.post<Interaction>(this.base, body);
   }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
 }
