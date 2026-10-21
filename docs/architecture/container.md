@@ -8,16 +8,16 @@ flowchart LR
   subgraph browser["Agent's browser"]
     ui["Angular SPA<br/>auth + correlation interceptors"]
   end
-  subgraph ocp["OpenShift Project"]
-    route["Route (TLS edge)"]
+  subgraph k3s["k3s namespace"]
+    ingress["Ingress (TLS)"]
     nginx["crm-ui<br/>nginx, serves Angular,<br/>forwards /api/"]
     api["crm-api<br/>Spring Boot REST<br/>JWT resource server"]
     pg[("PostgreSQL<br/>Flyway schema")]
     topic["Kafka topic<br/>crm.customer.interactions.v1"]
     consumer["Interaction consumer<br/>dedupe on eventId, retry, DLT"]
   end
-  ui -->|"HTTPS + Bearer JWT<br/>X-Correlation-ID: lab-request-001"| route
-  route --> nginx
+  ui -->|"HTTPS + Bearer JWT<br/>X-Correlation-ID: lab-request-001"| ingress
+  ingress --> nginx
   nginx -->|"/api/*"| api
   api -->|"1. save interaction (transaction)"| pg
   api -->|"2. publish after commit<br/>CustomerInteractionRecordedV1, key = customerId"| topic
@@ -34,7 +34,7 @@ flowchart LR
 
 **Images:** `backend/Dockerfile` → crm-api (port 8080) · `frontend/Dockerfile` → crm-ui (nginx, port 8080, forwards `/api/` to crm-api)
 
-**Security path:** Angular interceptor adds `Authorization: Bearer <JWT>` → Route (HTTPS) → crm-ui → crm-api checks the token and the AGENT/ADMIN role → 401 if no token, 403 if the role is wrong.
+**Security path:** Angular interceptor adds `Authorization: Bearer <JWT>` → Ingress (HTTPS) → crm-ui → crm-api checks the token and the AGENT/ADMIN role → 401 if no token, 403 if the role is wrong.
 
 **Request path for CAP-12:** POST `/api/v1/interactions` for CUS-1001 → crm-api saves the row in PostgreSQL → after commit, one event is published to `crm.customer.interactions.v1` → 201 returned to the UI.
 

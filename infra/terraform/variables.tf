@@ -1,5 +1,5 @@
 variable "environments" {
-  description = "OpenShift Projects for each environment (see docs/environment-strategy.md)"
+  description = "k3s namespaces (see docs/environment-strategy.md). One namespace, default, unless Tom adds more."
   type        = map(string)
   default = {
     dev   = "crm-dev"
@@ -10,13 +10,13 @@ variable "environments" {
 }
 
 variable "quota_memory" {
-  description = "Memory limit per Project"
+  description = "Memory limit per namespace"
   type        = string
   default     = "4Gi"
 }
 
 variable "quota_cpu" {
-  description = "CPU limit per Project"
+  description = "CPU limit per namespace"
   type        = string
   default     = "2"
 }
