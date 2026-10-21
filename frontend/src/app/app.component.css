@@ -4,13 +4,133 @@ header {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: #fff;
+  background: #222222;
   border-bottom: 1px solid #d5d9d6;
+  font-family: 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', sans-serif;
+} 
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand img {
+  display: block;
+  width: auto;
+  height: 2.5rem;
+  object-fit: contain;
+  filter: invert(1);
 }
 
 h1 {
   margin: 0;
   font-size: 1.25rem;
+  color: #fff;
+}
+
+nav a {
+  position: relative;
+  padding: 0.35rem 0;
+  color: #e5eee8;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+nav a:hover {
+  color: #fff;
+}
+
+nav a.active-nav-link {
+  color: #9de2c2;
+}
+
+nav a.active-nav-link::after {
+  position: absolute;
+  right: 0;
+  bottom: -1rem;
+  left: 0;
+  height: 3px;
+  background: #9de2c2;
+  content: '';
+}
+
+nav .logout-button {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5eee8;
+  border-radius: 3px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+nav .logout-button:hover {
+  background: #ffffff1a;
+}
+
+nav .logout-button:focus-visible {
+  outline: 2px solid #9de2c2;
+  outline-offset: 2px;
+}
+
+.logout-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(24rem, calc(100% - 3rem));
+  margin: 0;
+  padding: 1.5rem;
+  border: 1px solid #d5d9d6;
+  border-radius: 6px;
+  color: #18221b;
+  box-shadow: 0 1rem 3rem #0005;
+}
+
+.logout-dialog::backdrop {
+  background: #0008;
+}
+
+.logout-dialog h2 {
+  margin: 0 0 0.5rem;
+}
+
+.logout-dialog p {
+  margin: 0;
+  color: #59645d;
+}
+
+.logout-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.logout-dialog-actions button {
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #176b54;
+  border-radius: 3px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.logout-dialog-actions .cancel-button {
+  background: #fff;
+  color: #176b54;
+}
+
+.logout-dialog-actions .confirm-button {
+  background: #176b54;
+  color: #fff;
+}
+
+.logout-dialog-actions button:focus-visible {
+  outline: 2px solid #176b54;
+  outline-offset: 2px;
 }
 
 main {

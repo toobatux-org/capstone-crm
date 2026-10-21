@@ -2,6 +2,8 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { AuthSessionService } from '../../core/auth/auth-session.service';
+import { CustomerApiService } from '../customers/customer-api.service';
+import { Customer } from '../customers/customer.model';
 import { InteractionApiService } from './interaction-api.service';
 import { Interaction } from './interaction.model';
 
@@ -9,19 +11,59 @@ import { Interaction } from './interaction.model';
   selector: 'app-interaction-list-page',
   standalone: true,
   imports: [DatePipe, FormsModule],
+  host: { class: 'block max-w-[54rem]' },
   template: `
-    <section class="interactions-page">
-      <header class="page-heading">
+    <section>
+      <header class="mb-6 flex items-baseline justify-between gap-4 border-b border-[#d5d9d6]">
         <h2>Interactions</h2>
-        <p>Customer <code>{{ customerId }}</code></p>
+        <p class="text-[#59645d]">All customers</p>
       </header>
 
-      <form #interactionForm="ngForm" (ngSubmit)="create(interactionForm)" novalidate>
-        <div class="field">
-          <label for="interaction-type">Interaction type <span aria-hidden="true">*</span></label>
+      <form #interactionForm="ngForm" (ngSubmit)="create(interactionForm)" class="grid max-w-[38rem] gap-4" novalidate>
+        <div class="grid gap-[0.4rem]">
+          <label for="customer-id" class="font-semibold">Customer <span aria-hidden="true">*</span></label>
+          <select
+            id="customer-id"
+            name="customerId"
+            class="w-full box-border rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
+            [(ngModel)]="customerId"
+            #customerControl="ngModel"
+            required
+            [disabled]="customersLoading() || customers().length === 0"
+            aria-describedby="customer-hint customer-error"
+            data-testid="customer-select"
+          >
+            <option value="" disabled>Select a customer</option>
+            @for (customer of customers(); track customer.customerId) {
+              <option [value]="customer.customerId">{{ customer.fullName }} ({{ customer.customerId }})</option>
+            }
+          </select>
+          @if (customersLoading()) {
+            <span id="customer-hint" class="text-[#59645d]" role="status">Loading customers...</span>
+          } @else if (customersError()) {
+            <span id="customer-hint" class="text-[#9d2929]" role="alert">{{ customersError() }}</span>
+            <button
+              type="button"
+              class="justify-self-start cursor-pointer rounded-[3px] border border-[#87938b] bg-white px-3 py-1 font-[inherit] font-semibold"
+              (click)="loadCustomers()"
+            >Retry loading customers</button>
+          } @else {
+            <span id="customer-hint" class="text-[#59645d]">Choose which customer this interaction is for.</span>
+            @if (customers().length === 0) {
+              <span class="text-[#59645d]" role="status">No customers are available.</span>
+            }
+          }
+          @if ((customerControl.touched || interactionForm.submitted) && customerControl.invalid) {
+            <p id="customer-error" class="m-0 text-[0.9rem] text-[#9d2929]">Select a customer.</p>
+          }
+        </div>
+
+        <div class="grid gap-[0.4rem]">
+          <label for="interaction-type" class="font-semibold">Interaction type <span aria-hidden="true">*</span></label>
           <select
             id="interaction-type"
             name="interactionType"
+            class="w-full box-border rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
             [(ngModel)]="interactionType"
             #typeControl="ngModel"
             required
@@ -32,17 +74,18 @@ import { Interaction } from './interaction.model';
               <option [value]="type">{{ type }}</option>
             }
           </select>
-          <span id="type-hint" class="field-hint">Choose the kind of customer interaction.</span>
+          <span id="type-hint" class="text-[#59645d]">Choose the kind of customer interaction.</span>
           @if ((typeControl.touched || interactionForm.submitted) && typeControl.invalid) {
-            <p id="type-error" class="field-error">Select an interaction type.</p>
+            <p id="type-error" class="m-0 text-[0.9rem] text-[#9d2929]">Select an interaction type.</p>
           }
         </div>
 
-        <div class="field">
-          <label for="interaction-summary">Summary <span aria-hidden="true">*</span></label>
+        <div class="grid gap-[0.4rem]">
+          <label for="interaction-summary" class="font-semibold">Summary <span aria-hidden="true">*</span></label>
           <textarea
             id="interaction-summary"
             name="summary"
+            class="w-full box-border resize-y rounded-[3px] border border-[#87938b] bg-white p-[0.65rem] font-[inherit] text-[#18221b] focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
             [(ngModel)]="summary"
             #summaryControl="ngModel"
             required
@@ -51,12 +94,12 @@ import { Interaction } from './interaction.model';
             aria-describedby="summary-hint summary-error summary-count"
             data-testid="summary"
           ></textarea>
-          <div class="field-meta">
-            <span id="summary-hint" class="field-hint">Add a brief note, up to 1024 characters.</span>
-            <span id="summary-count" class="field-hint">{{ summary.length }}/1024</span>
+          <div class="flex items-baseline justify-between gap-4 text-sm">
+            <span id="summary-hint" class="text-[#59645d]">Add a brief note, up to 1024 characters.</span>
+            <span id="summary-count" class="text-[#59645d]">{{ summary.length }}/1024</span>
           </div>
           @if ((summaryControl.touched || interactionForm.submitted) && (!summary.trim() || summary.length > 1024)) {
-            <p id="summary-error" class="field-error">
+            <p id="summary-error" class="m-0 text-[0.9rem] text-[#9d2929]">
               @if (!summary.trim()) {
                 Enter a summary.
               } @else {
@@ -67,51 +110,119 @@ import { Interaction } from './interaction.model';
         </div>
 
         @if (createError()) {
-          <p class="state-error" role="alert">{{ createError() }}</p>
+          <p class="max-w-[38rem] text-[#9d2929]" role="alert">{{ createError() }}</p>
         }
 
-        <button type="submit" [disabled]="saving()" data-testid="create">
+        <button
+          type="submit"
+          class="justify-self-start cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-4 py-[0.65rem] font-[inherit] font-semibold text-white focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54] disabled:cursor-wait disabled:opacity-[0.65]"
+          [disabled]="saving() || customersLoading() || customers().length === 0"
+          data-testid="create"
+        >
           {{ saving() ? 'Recording...' : 'Record interaction' }}
         </button>
       </form>
 
-      <section class="timeline" aria-labelledby="timeline-heading" [attr.aria-busy]="loading()">
-        <div class="timeline-heading">
-          <h3 id="timeline-heading">Recent activity</h3>
+      <section class="mt-8 border-t border-[#d5d9d6] pt-4" aria-labelledby="timeline-heading" [attr.aria-busy]="loading()">
+        <div class="flex items-baseline justify-between gap-4">
+          <h3 id="timeline-heading" class="m-0">Recent activity</h3>
           @if (loading()) {
-            <span class="field-hint" role="status">Loading interactions...</span>
+            <span class="text-[#59645d]" role="status">Loading interactions...</span>
           }
         </div>
 
         @if (deleteError()) {
-          <p class="state-error" role="alert">{{ deleteError() }}</p>
+          <p class="max-w-[38rem] text-[#9d2929]" role="alert">{{ deleteError() }}</p>
         }
 
         @if (listError()) {
-          <div class="state-error" role="alert">
+          <div class="max-w-[38rem] text-[#9d2929]" role="alert">
             <p>{{ listError() }}</p>
-            <button type="button" (click)="reload()">Try again</button>
+            <button
+              type="button"
+              class="justify-self-start cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-4 py-[0.65rem] font-[inherit] font-semibold text-white focus:outline-2 focus:outline-offset-2 focus:outline-[#176b54]"
+              (click)="reload()"
+            >Try again</button>
           </div>
         } @else if (loading()) {
-          <p class="state-message" role="status">Fetching the customer timeline.</p>
+          <p class="text-[#59645d]" role="status">Fetching the customer timeline.</p>
         } @else if (rows().length === 0) {
-          <p class="state-message">No interactions recorded for this customer yet.</p>
+          <p class="text-[#59645d]">No interactions have been recorded yet.</p>
         } @else {
-          <ul>
+          <ul class="m-0 list-none p-0">
             @for (row of rows(); track row.id) {
-              <li data-testid="interaction-row">
-                <strong>{{ row.interactionType }}</strong>
-                <span>{{ row.summary }}</span>
-                <small>{{ row.createdAt | date: 'medium' }}</small>
-                <button
-                  type="button"
-                  class="danger"
-                  (click)="remove(row)"
-                  [disabled]="deletingId() === row.id"
-                  data-testid="delete"
-                >
-                  {{ deletingId() === row.id ? 'Deleting...' : 'Delete' }}
-                </button>
+              <li class="grid grid-cols-[7rem_auto_1fr_auto_auto] items-baseline gap-4 border-b border-[#e1e5e2] py-[0.85rem] max-[36rem]:grid-cols-1 max-[36rem]:gap-1" data-testid="interaction-row">
+                @if (editingId() === row.id) {
+                  <form #editForm="ngForm" (ngSubmit)="saveEdit(editForm, row)" class="grid gap-3 max-[36rem]:col-span-1 sm:col-span-5">
+                    <label class="grid gap-1 font-semibold">
+                      Interaction type
+                      <select
+                        name="editType"
+                        class="rounded-[3px] border border-[#87938b] bg-white p-2 font-[inherit]"
+                        [(ngModel)]="editType"
+                        required
+                      >
+                        @for (type of interactionTypes; track type) {
+                          <option [value]="type">{{ type }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="grid gap-1 font-semibold">
+                      Summary
+                      <textarea
+                        name="editSummary"
+                        class="rounded-[3px] border border-[#87938b] bg-white p-2 font-[inherit]"
+                        [(ngModel)]="editSummary"
+                        required
+                        maxlength="1000"
+                        rows="3"
+                      ></textarea>
+                    </label>
+                    @if (updateError()) {
+                      <p class="m-0 text-[#9d2929]" role="alert">{{ updateError() }}</p>
+                    }
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        class="cursor-pointer rounded-[3px] border-0 bg-[#176b54] px-3 py-1 font-[inherit] font-semibold text-white disabled:cursor-wait disabled:opacity-[0.65]"
+                        [disabled]="updatingId() !== null"
+                      >{{ updatingId() === row.id ? 'Saving...' : 'Save changes' }}</button>
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-[3px] border border-[#87938b] bg-white px-3 py-1 font-[inherit] font-semibold"
+                        [disabled]="updatingId() !== null"
+                        (click)="cancelEdit()"
+                      >Cancel</button>
+                    </div>
+                  </form>
+                } @else {
+                  <strong>{{ row.interactionType }}</strong>
+                  <small class="text-[#59645d]">{{ row.customerId }}</small>
+                  <span>{{ row.summary }}</span>
+                  <small class="text-[#59645d]">{{ row.createdAt | date: 'medium' }}</small>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      class="cursor-pointer rounded-[3px] border border-[#176b54] bg-white px-3 py-1 font-[inherit] font-semibold text-[#176b54] disabled:cursor-wait disabled:opacity-[0.65]"
+                      [disabled]="updatingId() !== null || deletingId() !== null"
+                      [attr.aria-label]="'Edit ' + row.interactionType + ' interaction'"
+                      (click)="beginEdit(row)"
+                      data-testid="edit-interaction"
+                    >Edit</button>
+                    @if (session.isAdmin()) {
+                      <button
+                        type="button"
+                        class="cursor-pointer rounded-[3px] border border-[#9d2929] bg-white px-3 py-1 font-[inherit] font-semibold text-[#9d2929] focus:outline-2 focus:outline-offset-2 focus:outline-[#9d2929] disabled:cursor-wait disabled:opacity-[0.65]"
+                        [disabled]="deletingId() !== null || updatingId() !== null"
+                        [attr.aria-label]="'Delete ' + row.interactionType + ' interaction'"
+                        (click)="delete(row)"
+                        data-testid="delete-interaction"
+                      >
+                        {{ deletingId() === row.id ? 'Deleting...' : 'Delete' }}
+                      </button>
+                    }
+                  </div>
+                }
               </li>
             }
           </ul>
@@ -119,56 +230,64 @@ import { Interaction } from './interaction.model';
       </section>
     </section>
   `,
-  styles: `
-    :host { display: block; max-width: 54rem; }
-    .page-heading, .timeline-heading, .field-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
-    .page-heading { border-bottom: 1px solid #d5d9d6; margin-bottom: 1.5rem; }
-    .page-heading p, .field-hint, small { color: #59645d; }
-    form { display: grid; gap: 1rem; max-width: 38rem; }
-    .field { display: grid; gap: 0.4rem; }
-    label { font-weight: 600; }
-    input, select, textarea { box-sizing: border-box; width: 100%; border: 1px solid #87938b; border-radius: 3px; padding: 0.65rem; font: inherit; background: #fff; color: #18221b; }
-    textarea { resize: vertical; }
-    input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid #176b54; outline-offset: 2px; }
-    .field-meta { font-size: 0.875rem; }
-    .field-error, .state-error { color: #9d2929; }
-    .field-error { margin: 0; font-size: 0.9rem; }
-    button { justify-self: start; border: 0; border-radius: 3px; padding: 0.65rem 1rem; background: #176b54; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
-    button.danger { justify-self: end; padding: 0.4rem 0.75rem; background: #fff; color: #9d2929; border: 1px solid #9d2929; }
-    button:disabled { cursor: wait; opacity: 0.65; }
-    .timeline { margin-top: 2rem; border-top: 1px solid #d5d9d6; padding-top: 1rem; }
-    .timeline h3 { margin: 0; }
-    .state-message { color: #59645d; }
-    .state-error { max-width: 38rem; }
-    .state-error p { margin: 0 0 0.75rem; }
-    ul { list-style: none; margin: 0; padding: 0; }
-    li { display: grid; grid-template-columns: 7rem 1fr auto auto; gap: 1rem; align-items: center; border-bottom: 1px solid #e1e5e2; padding: 0.85rem 0; }
-    @media (max-width: 36rem) { li { grid-template-columns: 1fr; gap: 0.25rem; } button.danger { justify-self: start; } }
-  `,
 })
 export class InteractionListPageComponent {
   private readonly api = inject(InteractionApiService);
-  private readonly session = inject(AuthSessionService);
+  private readonly customerApi = inject(CustomerApiService);
+  readonly session = inject(AuthSessionService);
 
-  readonly customerId = 'CUS-1001';
+  customerId = 'CUS-1001';
   readonly interactionTypes = ['CALL', 'EMAIL', 'NOTE', 'MEETING'];
   interactionType = '';
   summary = '';
   readonly rows = signal<Interaction[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly deletingId = signal<string | null>(null);
+  readonly editingId = signal<string | null>(null);
+  readonly updatingId = signal<string | null>(null);
   readonly listError = signal<string | null>(null);
   readonly createError = signal<string | null>(null);
   readonly deleteError = signal<string | null>(null);
-  readonly deletingId = signal<string | null>(null);
+  readonly updateError = signal<string | null>(null);
+  readonly customers = signal<Customer[]>([]);
+  readonly customersLoading = signal(false);
+  readonly customersError = signal<string | null>(null);
+  editType = '';
+  editSummary = '';
 
   constructor() {
+    this.loadCustomers();
     this.reload();
+  }
+
+  loadCustomers(): void {
+    this.customersLoading.set(true);
+    this.customersError.set(null);
+    this.customerApi.search('').subscribe({
+      next: (customers) => {
+        this.customers.set(customers);
+        if (!customers.some((customer) => customer.customerId === this.customerId)) {
+          this.customerId = customers[0]?.customerId ?? '';
+        }
+        this.customersLoading.set(false);
+      },
+      error: (err) => {
+        this.customersLoading.set(false);
+        this.customersError.set(this.message('load customers', err));
+      },
+    });
   }
 
   create(form: NgForm): void {
     this.createError.set(null);
-    if (form.invalid || !this.summary.trim() || this.summary.length > 1024 || this.saving()) {
+    if (
+      form.invalid ||
+      !this.customerId ||
+      !this.summary.trim() ||
+      this.summary.length > 1024 ||
+      this.saving()
+    ) {
       form.control.markAllAsTouched();
       return;
     }
@@ -184,7 +303,7 @@ export class InteractionListPageComponent {
       .subscribe({
         next: () => {
           this.saving.set(false);
-          form.resetForm({ interactionType: '', summary: '' });
+          form.resetForm({ customerId: this.customerId, interactionType: '', summary: '' });
           this.reload();
         },
         error: (err) => {
@@ -223,7 +342,7 @@ export class InteractionListPageComponent {
   reload(): void {
     this.loading.set(true);
     this.listError.set(null);
-    this.api.list(this.customerId).subscribe({
+    this.api.listAll().subscribe({
       next: (rows) => {
         this.rows.set(rows);
         this.loading.set(false);
@@ -231,6 +350,67 @@ export class InteractionListPageComponent {
       error: (err) => {
         this.loading.set(false);
         this.listError.set(this.message('load interactions', err));
+      },
+    });
+  }
+
+  beginEdit(row: Interaction): void {
+    this.editingId.set(row.id);
+    this.editType = row.interactionType;
+    this.editSummary = row.summary;
+    this.updateError.set(null);
+  }
+
+  cancelEdit(): void {
+    this.editingId.set(null);
+    this.editType = '';
+    this.editSummary = '';
+    this.updateError.set(null);
+  }
+
+  saveEdit(form: NgForm, row: Interaction): void {
+    this.updateError.set(null);
+    const summary = this.editSummary.trim();
+    if (
+      form.invalid ||
+      !this.editType ||
+      !summary ||
+      summary.length > 1000 ||
+      this.updatingId() !== null
+    ) {
+      form.control.markAllAsTouched();
+      return;
+    }
+
+    this.updatingId.set(row.id);
+    this.api.update(row.id, { interactionType: this.editType, summary }).subscribe({
+      next: (updated) => {
+        this.rows.update((rows) => rows.map((item) => (item.id === updated.id ? updated : item)));
+        this.updatingId.set(null);
+        this.cancelEdit();
+      },
+      error: (err) => {
+        this.updatingId.set(null);
+        this.updateError.set(this.message('update interaction', err));
+      },
+    });
+  }
+
+  delete(row: Interaction): void {
+    if (this.deletingId() !== null || !window.confirm('Delete this interaction? This cannot be undone.')) {
+      return;
+    }
+
+    this.deleteError.set(null);
+    this.deletingId.set(row.id);
+    this.api.delete(row.id).subscribe({
+      next: () => {
+        this.rows.update((rows) => rows.filter((item) => item.id !== row.id));
+        this.deletingId.set(null);
+      },
+      error: (err) => {
+        this.deletingId.set(null);
+        this.deleteError.set(this.message('delete interaction', err));
       },
     });
   }

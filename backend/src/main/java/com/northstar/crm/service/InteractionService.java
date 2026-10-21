@@ -11,7 +11,6 @@ import com.northstar.crm.repo.CustomerRepository;
 import com.northstar.crm.repo.InteractionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -57,15 +56,15 @@ public class InteractionService {
     List<InteractionResponse> responses = interactionRepository
             .findByCustomer_PublicIdOrderByCreatedAtDesc(customerId)
             .stream()
-            .map(
-                    interaction ->
-                            new InteractionResponse(
-                                    interaction.getId(),
-                                    interaction.getCustomer().getPublicId(),
-                                    interaction.getInteractionType(),
-                                    interaction.getSummary(),
-                                    interaction.getCorrelationId(),
-                                    interaction.getCreatedAt()))
+            .map(this::toResponse)
+            .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public List<InteractionResponse> listAll() {
+    return interactionRepository.findAllByOrderByCreatedAtDesc()
+            .stream()
+            .map(this::toResponse)
             .toList();
 
     log.atInfo()
@@ -145,10 +144,45 @@ public class InteractionService {
   }
 
   @Transactional
+  public InteractionResponse update(UUID id, UpdateInteractionRequest request) {
+
+    var interaction =
+            interactionRepository
+                    .findById(id)
+                    .orElseThrow(
+                            () ->
+                                    new ResponseStatusException(
+                                            HttpStatus.NOT_FOUND, "Interaction not found"));
+
+    interaction.setInteractionType(request.interactionType());
+    interaction.setSummary(request.summary());
+
+    var saved = interactionRepository.save(interaction);
+
+    return new InteractionResponse(
+            saved.getId(),
+            saved.getCustomer().getPublicId(),
+            saved.getInteractionType(),
+            saved.getSummary(),
+            saved.getCorrelationId(),
+            saved.getCreatedAt());
+  }
+
+  @Transactional
   public void delete(UUID id) {
     if (!interactionRepository.existsById(id)) {
       throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Interaction not found");
     }
     interactionRepository.deleteById(id);
+  }
+
+  private InteractionResponse toResponse(InteractionEntity interaction) {
+    return new InteractionResponse(
+            interaction.getId(),
+            interaction.getCustomer().getPublicId(),
+            interaction.getInteractionType(),
+            interaction.getSummary(),
+            interaction.getCorrelationId(),
+            interaction.getCreatedAt());
   }
 }
