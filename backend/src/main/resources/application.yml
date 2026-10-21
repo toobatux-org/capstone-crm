@@ -30,6 +30,12 @@ spring:
       group-id: crm-interaction-consumer
       auto-offset-reset: earliest
 
+app:
+  admin:
+    username: ${CRM_ADMIN_USERNAME:}
+    email: ${CRM_ADMIN_EMAIL:}
+    password: ${CRM_ADMIN_PASSWORD:}
+
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
