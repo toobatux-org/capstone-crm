@@ -22,77 +22,84 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }} # stage/prod wait for reviewer approval
+    environment: \${{ inputs.environment }} # stage/prod wait for reviewer approval
     env:
       REGISTRY_PATH: ghcr.io/toobatux-org/capstone-crm
+      NAMESPACE: student18
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up kubeconfig
         run: |
-          mkdir -p "$HOME/.kube"
-          echo "${{ secrets.KUBECONFIG }}" | base64 -d > "$HOME/.kube/config"
-          chmod 600 "$HOME/.kube/config"
+          mkdir -p "\$HOME/.kube"
+          echo "\({{ secrets.KUBECONFIG }}" \vert{} base64 -d > "\)HOME/.kube/config"
+          chmod 600 "\$HOME/.kube/config"
 
       - name: Apply cluster secrets
         env:
-          SPRING_SECURITY_JWT_SECRET: ${{ secrets.SPRING_SECURITY_JWT_SECRET }}
-          CRM_ADMIN_USERNAME: ${{ secrets.CRM_ADMIN_USERNAME }}
-          CRM_ADMIN_PASSWORD: ${{ secrets.CRM_ADMIN_PASSWORD }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SPRING_SECURITY_JWT_SECRET: \${{ secrets.SPRING_SECURITY_JWT_SECRET }}
+          CRM_ADMIN_USERNAME: \${{ secrets.CRM_ADMIN_USERNAME }}
+          CRM_ADMIN_PASSWORD: \${{ secrets.CRM_ADMIN_PASSWORD }}
+          POSTGRES_PASSWORD: \${{ secrets.POSTGRES_PASSWORD }}
         run: |
           set -euo pipefail
           kubectl create secret generic crm-backend-secrets \
-            --from-literal=SPRING_SECURITY_JWT_SECRET="$SPRING_SECURITY_JWT_SECRET" \
-            --from-literal=CRM_ADMIN_USERNAME="$CRM_ADMIN_USERNAME" \
-            --from-literal=CRM_ADMIN_PASSWORD="$CRM_ADMIN_PASSWORD" \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --from-literal=SPRING_SECURITY_JWT_SECRET="\$SPRING_SECURITY_JWT_SECRET" \
+            --from-literal=CRM_ADMIN_USERNAME="\$CRM_ADMIN_USERNAME" \
+            --from-literal=CRM_ADMIN_PASSWORD="\$CRM_ADMIN_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -n \$NAMESPACE -f -
           kubectl create secret generic postgres-secret \
             --from-literal=POSTGRES_USER=myuser \
             --from-literal=POSTGRES_DB=mydb \
-            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --from-literal=POSTGRES_PASSWORD="\$POSTGRES_PASSWORD" \
+            --dry-run=client -o yaml | kubectl apply -n \$NAMESPACE -f -
 
       - name: Deploy to cluster
         run: |
           set -euo pipefail
-          kubectl apply -f deploy/k3s/
+          kubectl apply -f deploy/k3s/ -n \$NAMESPACE
           kubectl set image deployment/crm-api \
-            crm-api="$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}"
+            crm-api="\$REGISTRY_PATH/crm-api@\({{ inputs.api_digest }}" -n \)NAMESPACE
           kubectl set image deployment/crm-ui \
-            crm-ui="$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}"
-          kubectl rollout status deployment/crm-api --timeout=180s
-          kubectl rollout status deployment/crm-ui --timeout=180s
+            crm-ui="\$REGISTRY_PATH/crm-ui@\({{ inputs.ui_digest }}" -n \)NAMESPACE
+          kubectl rollout status deployment/crm-api --timeout=180s -n \$NAMESPACE
+          kubectl rollout status deployment/crm-ui --timeout=180s -n \$NAMESPACE
 
       - name: Smoke test CUS-1001
         env:
-          SMOKE_USERNAME: ${{ secrets.SMOKE_USERNAME }}
-          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_USERNAME: \${{ secrets.SMOKE_USERNAME }}
+          SMOKE_PASSWORD: \${{ secrets.SMOKE_PASSWORD }}
         run: |
           set -euo pipefail
-          kubectl delete pod smoke-crm --ignore-not-found
-          kubectl run smoke-crm --restart=Never --image=curlimages/curl:8.11.1 --command -- sleep 90
-          kubectl wait --for=condition=Ready pod/smoke-crm --timeout=90s
-          FRONT_IP=$(kubectl get pod -l app=crm-ui -o jsonpath='{.items[0].status.podIP}')
-          kubectl exec smoke-crm -- curl -fsS -o /dev/null -w "UI %{http_code}\n" "http://$FRONT_IP:8080/"
-          TOKEN=$(kubectl exec smoke-crm -- curl -fsS -X POST "http://crm-api-service:8080/api/v1/auth/login" \
+          kubectl delete pod smoke-crm -n \$NAMESPACE --ignore-not-found
+          kubectl run smoke-crm -n \$NAMESPACE --restart=Never --image=curlimages/curl:8.11.1 --command -- sleep 90
+          kubectl wait -n \$NAMESPACE --for=condition=Ready pod/smoke-crm --timeout=90s
+          FRONT_IP=\((kubectl get pod -n\)NAMESPACE -l app=crm-ui -o jsonpath='{.items[0].status.podIP}')
+          
+          # Testing container direct endpoint over port 8080 (Unprivileged NGINX configuration)
+          kubectl exec smoke-crm -n \(NAMESPACE -- curl -fsS -o /dev/null -w "UI \%{http_code}\n" "http://\)FRONT_IP:8080/"
+          
+          # Routing API auth sequence over internal Cluster IP boundaries
+          TOKEN=\((kubectl exec smoke-crm -n\)NAMESPACE -- curl -fsS -X POST "http://crm-api-service:8080/api/v1/auth/login" \
             -H "Content-Type: application/json" \
-            -d "{\"username\":\"$SMOKE_USERNAME\",\"password\":\"$SMOKE_PASSWORD\"}" | jq -r .token)
-          echo "::add-mask::$TOKEN"
-          kubectl exec smoke-crm -- curl -fsS -w "\nAPI %{http_code}\n" \
-            -H "Authorization: Bearer $TOKEN" \
+            -d "{\"username\":\"\(SMOKE_USERNAME\",\"password\":\"\)SMOKE_PASSWORD\"}" | jq -r .token)
+          
+          echo "::add-mask::\$TOKEN"
+          
+          kubectl exec smoke-crm -n \$NAMESPACE -- curl -fsS -w "\nAPI %{http_code}\n" \
+            -H "Authorization: Bearer \$TOKEN" \
             -H "X-Correlation-ID: lab-request-001" \
             "http://crm-api-service:8080/api/v1/interactions?customerId=CUS-1001"
-          kubectl delete pod smoke-crm --ignore-not-found
+          
+          kubectl delete pod smoke-crm -n \$NAMESPACE --ignore-not-found
 
       - name: Record what was deployed
         if: always()
         run: |
-          NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
           {
-            echo "### Deployed to k3s namespace \`${NS:-default}\`"
+            echo "### Deployed to k3s namespace \`$NAMESPACE\`"
             echo "- crm-api: \`$REGISTRY_PATH/crm-api@${{ inputs.api_digest }}\`"
             echo "- crm-ui: \`$REGISTRY_PATH/crm-ui@${{ inputs.ui_digest }}\`"
-            echo "- Rollback: \`kubectl rollout undo deployment/crm-api\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+            echo "- Rollback: \`kubectl rollout undo deployment/crm-api -n $NAMESPACE\`"
+          } >> "\$GITHUB_STEP_SUMMARY"
