@@ -9,12 +9,6 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
   standalone: true,
   imports: [FormsModule],
   template: `
-<<<<<<< HEAD
-    <section>
-      <button type="button" (click)="login()">Sign in</button>
-      <!-- <p>Mock login stores a demo Bearer token in memory only — not localStorage.</p>
-      <p>XSS probe (must stay text): {{ xssProbe }}</p> -->
-=======
     <section class="login-page">
       <header class="page-heading">
         <h2>{{ registering() ? 'Create account' : 'Sign in' }}</h2>
@@ -28,7 +22,6 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
             id="username"
             name="username"
             [(ngModel)]="username"
-            placeholder="name@northstar.lab"
             autocomplete="username"
             required
             data-testid="username"
@@ -83,9 +76,6 @@ import { AuthSessionService } from '../../core/auth/auth-session.service';
           }
         </div>
       </form>
-
-      <p class="probe">XSS probe (must stay text): {{ xssProbe }}</p>
->>>>>>> main
     </section>
   `,
   styles: `
@@ -119,7 +109,6 @@ export class LoginPageComponent {
   readonly error = signal('');
   readonly submitting = signal(false);
   readonly registering = signal(false);
-  readonly xssProbe = '<img src=x onerror=alert(1)> CUS-1001';
 
   submitLabel(): string {
     if (this.submitting()) {
