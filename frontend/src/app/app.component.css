@@ -6,7 +6,8 @@ header {
   padding: 1rem 1.25rem;
   background: #222222;
   border-bottom: 1px solid #d5d9d6;
-}
+  font-family: 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', sans-serif;
+} 
 
 .brand {
   display: flex;
