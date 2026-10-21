@@ -4,7 +4,7 @@ metadata:
   name: capstone-ingress
 spec:
   rules:
-    - host: capstone.local
+    - host: student18.32.189.172.33.nip.io
       http:
         paths:
           - path: /api
