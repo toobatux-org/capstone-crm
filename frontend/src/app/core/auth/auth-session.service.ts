@@ -5,13 +5,16 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class AuthSessionService {
   readonly accessToken = signal<string | null>(null);
-  readonly demoMode = signal(false);
-  readonly isSignedIn = computed(() => this.accessToken() !== null || this.demoMode());
-  readonly isAdmin = computed(() => this.tokenRoles().includes('ADMIN'));
+  readonly roles = signal<string[]>([]);
 
   setAccessToken(token: string): void {
     this.demoMode.set(false);
     this.accessToken.set(token);
+    this.roles.set(this.readRoles(token));
+  }
+
+  isAdmin(): boolean {
+    return this.roles().includes('ADMIN');
   }
 
   startDemoSession(): void {
@@ -24,25 +27,17 @@ export class AuthSessionService {
 
   logout(): void {
     this.accessToken.set(null);
-    this.demoMode.set(false);
+    this.roles.set([]);
   }
 
-  private tokenRoles(): string[] {
-    const token = this.accessToken();
-    const encodedPayload = token?.split('.')[1];
-    if (!encodedPayload) return [];
-
+  private readRoles(token: string): string[] {
+    const payload = token.split('.')[1];
+    if (!payload) {
+      return [];
+    }
     try {
-      const base64 = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
-      const bytes = Uint8Array.from(
-        atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')),
-        (character) => character.charCodeAt(0),
-      );
-      const payload: unknown = JSON.parse(new TextDecoder().decode(bytes));
-      if (typeof payload !== 'object' || payload === null || !('roles' in payload) || !Array.isArray(payload.roles)) {
-        return [];
-      }
-      return payload.roles.filter((role): role is string => typeof role === 'string');
+      const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { roles?: unknown };
+      return Array.isArray(json.roles) ? json.roles.filter((role): role is string => typeof role === 'string') : [];
     } catch {
       return [];
     }

@@ -313,6 +313,32 @@ export class InteractionListPageComponent {
       });
   }
 
+  remove(row: Interaction): void {
+    if (this.deletingId()) {
+      return;
+    }
+    this.deleteError.set(null);
+    if (!this.session.isAdmin()) {
+      this.deleteError.set('Only admins can delete interactions.');
+      return;
+    }
+    this.deletingId.set(row.id);
+    this.api.delete(row.id).subscribe({
+      next: () => {
+        this.deletingId.set(null);
+        this.rows.update((rows) => rows.filter((item) => item.id !== row.id));
+      },
+      error: (err) => {
+        this.deletingId.set(null);
+        if (err.status === 403) {
+          this.deleteError.set('Only admins can delete interactions.');
+          return;
+        }
+        this.deleteError.set(this.message('delete interaction', err));
+      },
+    });
+  }
+
   reload(): void {
     this.loading.set(true);
     this.listError.set(null);

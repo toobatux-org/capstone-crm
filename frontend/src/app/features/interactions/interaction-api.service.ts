@@ -41,17 +41,7 @@ export class InteractionApiService {
     return this.http.post<Interaction>(this.base, body);
   }
 
-  update(id: string, body: UpdateInteractionRequest): Observable<Interaction> {
-    if (this.session.demoMode()) {
-      return this.demoData.updateInteraction(id, body);
-    }
-    return this.http.put<Interaction>(`${this.base}/${encodeURIComponent(id)}`, body);
-  }
-
   delete(id: string): Observable<void> {
-    if (this.session.demoMode()) {
-      return this.demoData.deleteInteraction(id);
-    }
-    return this.http.delete<void>(`${this.base}/${encodeURIComponent(id)}`);
+    return this.http.delete<void>(`${this.base}/${id}`);
   }
 }

@@ -98,7 +98,7 @@ import { environment } from '../../../environments/environment';
     :host { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 6.5rem); }
     .login-page { width: 100%; max-width: 28rem; background: #fff; border: 1px solid #d5d9d6; border-radius: 6px; padding: 1.5rem; }
     .page-heading { border-bottom: 1px solid #d5d9d6; margin-bottom: 1.5rem; }
-    .page-heading p, .probe { color: #59645d; }
+    .page-heading p { color: #59645d; }
     .page-heading h2 { margin-bottom: 0.35rem; }
     form { display: grid; gap: 1rem; }
     .field { display: grid; gap: 0.4rem; }
@@ -111,7 +111,6 @@ import { environment } from '../../../environments/environment';
     button { border: 0; border-radius: 3px; padding: 0.65rem 1rem; background: #176b54; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
     button.secondary { background: #fff; color: #176b54; border: 1px solid #176b54; }
     button:disabled { cursor: wait; opacity: 0.65; }
-    .probe { margin-top: 1.5rem; font-size: 0.875rem; }
   `,
 })
 export class LoginPageComponent {
