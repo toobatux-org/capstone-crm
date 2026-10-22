@@ -36,6 +36,17 @@ app:
     email: ${CRM_ADMIN_EMAIL:}
     password: ${CRM_ADMIN_PASSWORD:}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
